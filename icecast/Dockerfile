@@ -1,17 +1,10 @@
-FROM alpine:3.3
-MAINTAINER @VITIMan https://github.com/VITIMan 
+FROM alpine:3.19.0
 
-ENV ICECAST_VERSION 2.4.2-r1
-
-# https://docs.docker.com/engine/reference/builder/#arg
-# docker run -p 8000:8000 --net music_stack --name=icecast -d alpine-icecast:dev
 ARG user=icecast
 ARG group=icecast
-# ARG uid=1000
-# ARG gid=1000
 
 RUN apk -q update \
-    && apk -q --no-progress add icecast="$ICECAST_VERSION" \
+    && apk -q --no-progress add icecast \
     && rm -rf /var/cache/apk/*
 
 COPY silence.ogg /usr/share/icecast/silence.ogg

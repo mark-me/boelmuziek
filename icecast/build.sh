@@ -19,14 +19,14 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Pull docker images
-docker pull ghcr.io/mark-me/boelmuziek-mpd:$VERSION_ID
-docker pull ghcr.io/mark-me/boelmuziek-mpd:latest
+docker pull ghcr.io/mark-me/boelmuziek-icecast:$VERSION_ID
+docker pull ghcr.io/mark-me/boelmuziek-icecast:latest
 
 # App
-docker build -t ghcr.io/mark-me/boelmuziek-mpd:$VERSION_ID -t ghcr.io/mark-me/boelmuziek-mpd:latest .
+docker build -t ghcr.io/mark-me/boelmuziek-icecast:$VERSION_ID -t ghcr.io/mark-me/boelmuziek-icecast:latest .
 
 # Optionally push Docker images
 if [ "$PUSH_IMAGES" = true ]; then
-    docker push ghcr.io/mark-me/boelmuziek-mpd:$VERSION_ID
-    docker push ghcr.io/mark-me/boelmuziek-mpd:latest
+    docker push ghcr.io/mark-me/boelmuziek-icecast:$VERSION_ID
+    docker push ghcr.io/mark-me/boelmuziek-icecast:latest
 fi
