@@ -1,9 +1,21 @@
 version: '3'
 
 services:
+  ui:
+    image: ghcr.io/mark-me/boelmuziek-ui:v0.0.1
+    container_name: ui
+    restart: unless-stopped
+    depends_on:
+      - icecast
+      - mpd
+    ports:
+      - 80:80
+    networks:
+      - music_stack
   icecast:
     image: ghcr.io/mark-me/boelmuziek-icecast:v0.0.1
     container_name: icecast
+    restart: unless-stopped
     ports:
       - 8000:8000
     networks:
@@ -11,10 +23,11 @@ services:
   mpd:
     image: ghcr.io/mark-me/boelmuziek-mpd:v0.0.1
     container_name: mpd
-    ports:
-      - 6600:6600
+    restart: unless-stopped
     depends_on:
       - icecast
+    ports:
+      - 6600:6600
     networks:
       - music_stack
     volumes:
@@ -24,13 +37,16 @@ services:
   snapserver:
     image: ghcr.io/mark-me/boelmuziek-snapserver:v0.0.1
     container_name: snapserver
+    restart: unless-stopped
+    depends_on:
+      - mpd
     ports:
       - 1704:1704
-    depends_on:
-      - snapserver
     volumes:
         - '${PWD}/mpdstate/snapfifo:/var/lib/snapserver/soundshare/snapfifo:rw'
         - '${PWD}/snapserver/snapserver.conf:/var/lib/snapserver/snapserver.conf:ro'
+    networks:
+      - music_stack
 
 networks:
   music_stack:
