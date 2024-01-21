@@ -1,6 +1,6 @@
 # BoelMuziek
 
-One music collection, played everywhere.
+One music collection, playing everywhere.
 
 A music player that offers diverse navigation options through your music library and allows you to make choices about when to indulge in your favorite tunes. Whether you prefer the intimate experience on the device you're using for navigation or desire to immerse your space in a harmonious ambiance, the player seamlessly extends its capabilities to play music across multiple devices on the local network.
 
