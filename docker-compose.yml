@@ -5,36 +5,60 @@ services:
     image: ghcr.io/mark-me/boelmuziek-icecast:v0.0.1
     container_name: icecast
     ports:
-      - "8000:8000"
+      - 8000:8000
     networks:
       - music_stack
-
-  # Add your host volumen in path/to/... or add your own volume below
   mpd:
     image: ghcr.io/mark-me/boelmuziek-mpd:v0.0.1
     container_name: mpd
     ports:
-      - "6600:6600"
+      - 6600:6600
     depends_on:
       - icecast
     networks:
       - music_stack
     volumes:
-      - /home/mark/Music:/var/lib/mpd/music
-      - ./playlists:/var/lib/mpd/playlists
-      - ./data:/var/lib/mpd/database
+      - music:/var/lib/mpd/music
+      - playlist:/var/lib/mpd/playlists
+      - db:/var/lib/mpd/database
+  snapserver:
+    image: ghcr.io/mark-me/boelmuziek-snapserver:v0.0.1
+    container_name: snapserver
+    ports:
+      - 1704:1704
+    depends_on:
+      - snapserver
+    volumes:
+        - '${PWD}/mpdstate/snapfifo:/var/lib/snapserver/soundshare/snapfifo:rw'
+        - '${PWD}/snapserver/snapserver.conf:/var/lib/snapserver/snapserver.conf:ro'
 
 networks:
   music_stack:
     driver: bridge
 
-# If you use your own volumes instead host volumes, uncomment this section
-# volumes:
-#   mpd_music:
-#     external: true
-#   mpd_playlists:
-#     external: true
-#   mpd_database:
-#     external: true
-
+volumes:
+  music:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/mark/Music
+      o: "bind,ro"
+  playlist:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/mark/Development/boelmuziek-data/playlist
+      o: "bind,rw"
+  db:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/mark/Development/boelmuziek-data/db
+      o: "bind,rw"
+  snapserver:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/mark/Development/boelmuziek-data/snapserver
+      o: "bind,rw"
 
