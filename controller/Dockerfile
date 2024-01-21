@@ -5,4 +5,6 @@ COPY ./requirements.txt /app
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
-CMD ["uvicorn", "main:app", "--reload"]
+EXPOSE 5000
+
+CMD ["uvicorn", "main:app", "--reload", "--port", "5000"]

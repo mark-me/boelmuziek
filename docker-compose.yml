@@ -12,6 +12,16 @@ services:
       - 80:80
     networks:
       - music_stack
+  controller:
+    image: ghcr.io/mark-me/boelmuziek-controller:v0.0.1
+    container_name: controller
+    restart: unless-stopped
+    depends_on:
+      - mpd
+    ports:
+      - 5000:5000
+    networks:
+      - music_stack
   icecast:
     image: ghcr.io/mark-me/boelmuziek-icecast:v0.0.1
     container_name: icecast
@@ -24,8 +34,6 @@ services:
     image: ghcr.io/mark-me/boelmuziek-mpd:v0.0.1
     container_name: mpd
     restart: unless-stopped
-    depends_on:
-      - icecast
     ports:
       - 6600:6600
     networks:
