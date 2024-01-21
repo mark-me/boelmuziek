@@ -32,7 +32,7 @@ services:
       - music_stack
     volumes:
       - music:/var/lib/mpd/music
-      - playlist:/var/lib/mpd/playlists
+      - playlists:/var/lib/mpd/playlists
       - db:/var/lib/mpd/database
   snapserver:
     image: ghcr.io/mark-me/boelmuziek-snapserver:v0.0.1
@@ -59,11 +59,11 @@ volumes:
       type: none
       device: /home/mark/Music
       o: "bind,ro"
-  playlist:
+  playlists:
     driver: local
     driver_opts:
       type: none
-      device: /home/mark/Development/boelmuziek-data/playlist
+      device: /home/mark/Development/boelmuziek-data/playlists
       o: "bind,rw"
   db:
     driver: local
