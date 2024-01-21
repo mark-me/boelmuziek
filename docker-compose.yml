@@ -42,6 +42,7 @@ services:
       - music:/var/lib/mpd/music
       - playlists:/var/lib/mpd/playlists
       - db:/var/lib/mpd/database
+      - snapfifo:/var/lib/mpd/state/snapfifo:rw
   snapserver:
     image: ghcr.io/mark-me/boelmuziek-snapserver:v0.0.1
     container_name: snapserver
@@ -51,8 +52,7 @@ services:
     ports:
       - 1704:1704
     volumes:
-        - '${PWD}/mpdstate/snapfifo:/var/lib/snapserver/soundshare/snapfifo:rw'
-        - '${PWD}/snapserver/snapserver.conf:/var/lib/snapserver/snapserver.conf:ro'
+        - snapfifo:/var/lib/snapserver/soundshare/snapfifo:rw'
     networks:
       - music_stack
 
@@ -72,6 +72,12 @@ volumes:
     driver_opts:
       type: none
       device: /home/mark/Development/boelmuziek-data/playlists
+      o: "bind,rw"
+  snapfifo:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/mark/Development/boelmuziek-data/mpdstate/snapfifo
       o: "bind,rw"
   db:
     driver: local
