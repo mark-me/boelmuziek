@@ -1,8 +1,8 @@
-version: '2'
+version: '3'
 
 services:
   icecast:
-    image: vitiman/alpine-icecast:latest
+    image: ghcr.io/mark-me/boelmuziek-icecast:v0.0.1
     container_name: icecast
     ports:
       - "8000:8000"
@@ -11,7 +11,7 @@ services:
 
   # Add your host volumen in path/to/... or add your own volume below
   mpd:
-    image: vitiman/alpine-mpd:latest
+    image: ghcr.io/mark-me/boelmuziek-mpd:v0.0.1
     container_name: mpd
     ports:
       - "6600:6600"
@@ -23,24 +23,6 @@ services:
       - /home/mark/Music:/var/lib/mpd/music
       - ./playlists:/var/lib/mpd/playlists
       - ./data:/var/lib/mpd/database
-
-  sima:
-    image: vitiman/alpine-sima:latest
-    container_name: sima
-    depends_on:
-      - mpd
-    networks:
-      - music_stack
-
-  ympd:
-    image: vitiman/alpine-ympd:latest
-    container_name: ympd
-    ports:
-      - "8080:8080"
-    depends_on:
-      - mpd
-    networks:
-      - music_stack
 
 networks:
   music_stack:
