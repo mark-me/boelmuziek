@@ -11,3 +11,7 @@ A music player that offers diverse navigation options through your music library
 
 ### Technical
 ![Technical components](images/components-technical.png)
+
+#### Icecast
+
+Mount point http://localhost:8000/mpd

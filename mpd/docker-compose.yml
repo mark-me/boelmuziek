@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  mpd:
+    image: ghcr.io/mark-me/boelmuziek-mpd:v0.0.1
+    container_name: mpd
+    restart: unless-stopped
+    ports:
+      - 6600:6600
+    volumes:
+      - ${DIR_MUSIC}:/var/lib/mpd/music
+      - ${DIR_MPD_PLAYLIST}:/var/lib/mpd/playlists
+      - ${DIR_MPD_DB}:/var/lib/mpd/database
+      - ${DIR_MPD_STATE}:/var/lib/mpd/state:rw
+
