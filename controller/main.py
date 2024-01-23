@@ -10,7 +10,10 @@ app = FastAPI()
 async def read_root():
     task_connect = asyncio.create_task(mpd.connect())
     is_connected = await task_connect
-    return {"MPD connected": is_connected}
+    await mpd.status_get()
+    task_control = asyncio.create_task(mpd.player_control_get())
+    mpd_control_status = await task_control
+    return {"MPD status": mpd_control_status}
 
 
 @app.get("/items/{item_id}")
