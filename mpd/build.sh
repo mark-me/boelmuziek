@@ -1,5 +1,6 @@
 #!/bin/bash
 VERSION_ID='v0.0.1'
+COMPONENT=mpd
 PUSH_IMAGES=false  # Default value for pushing images
 
 # Check for the optional parameter
@@ -19,14 +20,14 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Pull docker images
-docker pull ghcr.io/mark-me/boelmuziek-mpd:$VERSION_ID
-docker pull ghcr.io/mark-me/boelmuziek-mpd:latest
+docker pull ghcr.io/mark-me/boelmuziek-$COMPONENT:$VERSION_ID
+docker pull ghcr.io/mark-me/boelmuziek-$COMPONENT:latest
 
 # App
-docker build -t ghcr.io/mark-me/boelmuziek-mpd:$VERSION_ID -t ghcr.io/mark-me/boelmuziek-mpd:latest .
+docker build -t ghcr.io/mark-me/boelmuziek-$COMPONENT:$VERSION_ID -t ghcr.io/mark-me/boelmuziek-$COMPONENT:latest .
 
 # Optionally push Docker images
 if [ "$PUSH_IMAGES" = true ]; then
-    docker push ghcr.io/mark-me/boelmuziek-mpd:$VERSION_ID
-    docker push ghcr.io/mark-me/boelmuziek-mpd:latest
+    docker push ghcr.io/mark-me/boelmuziek-$COMPONENT:$VERSION_ID
+    docker push ghcr.io/mark-me/boelmuziek-$COMPONENT:latest
 fi

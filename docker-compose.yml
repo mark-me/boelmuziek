@@ -2,7 +2,7 @@ version: '3'
 
 services:
   ui:
-    image: ghcr.io/mark-me/boelmuziek-ui:v0.0.1
+    image: ghcr.io/mark-me/boelmuziek-ui:${TAG_UI}
     container_name: ui
     restart: unless-stopped
     environment:
@@ -15,7 +15,7 @@ services:
     networks:
       - music_stack
   controller:
-    image: ghcr.io/mark-me/boelmuziek-controller:v0.0.1
+    image: ghcr.io/mark-me/boelmuziek-controller:${TAG_CONTROLLER}
     container_name: controller
     restart: unless-stopped
     environment:
@@ -27,7 +27,7 @@ services:
     networks:
       - music_stack
   icecast:
-    image: ghcr.io/mark-me/boelmuziek-icecast:v0.0.1
+    image: ghcr.io/mark-me/boelmuziek-icecast:${TAG_ICECAST}
     container_name: icecast
     restart: unless-stopped
     environment:
@@ -37,7 +37,7 @@ services:
     networks:
       - music_stack
   mpd:
-    image: ghcr.io/mark-me/boelmuziek-mpd:v0.0.1
+    image: ghcr.io/mark-me/boelmuziek-mpd:${TAG_MPD}
     container_name: mpd
     restart: unless-stopped
     environment:
@@ -48,11 +48,11 @@ services:
       - music_stack
     volumes:
       - ${DIR_MUSIC}:/var/lib/mpd/music
-      - ${DIR_MPD_PLAYLIST}:/var/lib/mpd/playlists
+      - ${DIR_MPD_PLAYLISTS}:/var/lib/mpd/playlists
       - ${DIR_MPD_DB}:/var/lib/mpd/database
       - ${DIR_MPD_STATE}:/var/lib/mpd/state
   snapserver:
-    image: ghcr.io/mark-me/boelmuziek-snapserver:v0.0.1
+    image: ghcr.io/mark-me/boelmuziek-snapserver:${TAG_SNAPSERVER}
     container_name: snapserver
     restart: unless-stopped
     environment:

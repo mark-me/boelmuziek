@@ -1,6 +1,6 @@
 #!/bin/bash
 VERSION_ID='v0.0.1'
-COMPONENT=icecast
+COMPONENT=ympd
 PUSH_IMAGES=false  # Default value for pushing images
 
 # Check for the optional parameter
