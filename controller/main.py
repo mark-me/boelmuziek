@@ -1,13 +1,16 @@
 from typing import Union
-
+import asyncio
+from mpd_client import *
 from fastapi import FastAPI
 
 app = FastAPI()
 
 
 @app.get("/")
-def read_root():
-    return {"Hello": "World"}
+async def read_root():
+    task_connect = asyncio.create_task(mpd.connect())
+    is_connected = await task_connect
+    return {"MPD connected": is_connected}
 
 
 @app.get("/items/{item_id}")
