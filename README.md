@@ -30,10 +30,10 @@ How each components is created can be found within it's own subdirectory:
 
 ```bash
 .
-├── controller - Developing playback commands, states and library querying
-├── icecast - Stream music to client
-├── mpd - The music library player
-├── snapserver - Snapcast server that serves audio for multi-room purposes
-├── ui - Developing UI
-└── ympd - Contains a temporary UI that will de replaced by the developing ui
+├── controller  'Developing playback commands, states and library querying'
+├── icecast     'Stream music to client'
+├── mpd         'The music library player'
+├── snapserver  'Snapcast server that serves audio for multi-room purposes'
+├── ui          'Developing UI'
+└── ympd        'Contains a temporary UI that will de replaced by the developing ui'
 ```
