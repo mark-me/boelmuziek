@@ -12,6 +12,25 @@ A music player that offers diverse navigation options through your music library
 ### Technical
 ![Technical components](images/components-technical.png)
 
-#### Icecast
+## Set-up
 
-Mount point http://localhost:8000/mpd
+The total stack can be deployed by using [Docker Compose](https://docs.docker.com/compose/install/) and the docker-compose.yml file found in the repo's root directory. Change the ```DIR_``` variables in the .env file to reflect your system.
+
+The total stack consists of the following components
+
+* [MPD](https://musicpd.org/) is a server side music player which also allows querying it's music library.
+* [ympd](https://ympd.org/) is a temporary MPD web client, included here to quickly review the stack's functionality. Once the stack is deployed you can find it at http://localhost:8080
+* [Icecast](https://icecast.org/) is used to stream music to the client. You can listen to the playback stream at http://localhost:8000/mpd
+* [Snapcast server](https://github.com/badaix/snapcast) is used to stream the music over the LAN to be received by all subscribed clients using Snapcast's client.
+
+Each component is contained within it's own subdirectory.
+
+```bash
+.
+├── controller - Developing playback commands, states and library querying
+├── icecast - Stream music to client
+├── mpd - The music library player
+├── snapserver - Snapcast server that serves audio for multi-room purposes
+├── ui - Developing UI
+└── ympd - Contains a temporary UI that will de replaced by the developing ui
+```
