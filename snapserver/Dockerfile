@@ -4,7 +4,7 @@ RUN apk add snapcast-server \
     && apk add avahi \
     && mkdir -p /var/lib/snapserver/soundshare
 
-COPY ./snapserver.conf /var/lib/snapserver/snapserver.conf
+COPY ./snapserver.conf /etc/snapserver.conf
 
 EXPOSE 1704
 EXPOSE 1705
