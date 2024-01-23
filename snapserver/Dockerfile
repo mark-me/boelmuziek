@@ -8,5 +8,7 @@ COPY ./snapserver.conf /var/lib/snapserver/snapserver.conf
 
 EXPOSE 1704
 EXPOSE 1705
+# Volume control
+EXPOSE 1780
 
 ENTRYPOINT ["/usr/bin/snapserver"]

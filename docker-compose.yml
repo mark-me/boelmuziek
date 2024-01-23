@@ -74,6 +74,7 @@ services:
     ports:
       - 1704:1704
       - 1705:1705
+      - 1780:1780
     volumes:
         - ${DIR_MPD_STATE}/snapfifo:/var/lib/snapserver/soundshare/snapfifo:rw'
     networks:

@@ -24,7 +24,7 @@ After firing up docker compose, you have a stack which consists of the following
 * [MPD](https://musicpd.org/) is a server side music player which also allows querying it's music library.
 * [ympd](https://ympd.org/) is a temporary MPD web client, included here to quickly review the stack's functionality. Once the stack is deployed you can find it at http://localhost:8080
 * [Icecast](https://icecast.org/) is used to stream music to the client. You can listen to the playback stream at http://localhost:8000/mpd
-* [Snapcast server](https://github.com/badaix/snapcast) is used to stream the music over the LAN to be received by all subscribed clients using Snapcast's client.
+* [Snapcast server](https://github.com/badaix/snapcast) is used to stream the music over the LAN to be received by all subscribed clients using Snapcast's client. Access the volume of all clients at http://localhost:1780/.
 
 How each components is created can be found within it's own subdirectory:
 
