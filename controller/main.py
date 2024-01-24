@@ -23,10 +23,23 @@ async def read_artists(type: str, part_string: str):
         task_connect = asyncio.create_task(mpd.connect())
         is_connected = await task_connect
     lst_results = []
-    if(type=='artists'):
+    if(type=='artist'):
         lst_results = await mpd.artists_get(part=part_string, only_start=False)
-    elif(type=='albums'):
+    elif(type=='album'):
         lst_results = await mpd.albums_get(part=part_string, only_start=False)
-    elif(type=='songs'):
+    elif(type=='title'):
         lst_results = await mpd.songs_get(part=part_string, only_start=False)
     return lst_results
+
+@app.get("/lookfor/{type}/{part_string}")
+async def search_music(type: str, part_string: str):
+    if(not mpd.is_connected):
+        task_connect = asyncio.create_task(mpd.connect())
+        is_connected = await task_connect
+    lst_results = []
+    lst_results = await mpd.search(type=type,
+                                   filter=part_string)
+    return lst_results
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=5080)

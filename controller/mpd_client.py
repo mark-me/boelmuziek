@@ -23,6 +23,7 @@ import logging
 
 import os
 import time
+import pandas as pd
 from mpd.asyncio import MPDClient
 from collections import deque
 
@@ -351,7 +352,7 @@ class MPDController(object):
         self.list_query_results = []
         all_results = self.mpd_client.list(tag_type)
         async for result in all_results:
-            if result['artist'].upper().find(part.upper()) > -1:
+            if result[tag_type].upper().find(part.upper()) > -1:
                 self.list_query_results.append(result)
         return self.list_query_results
 
@@ -408,12 +409,12 @@ class MPDController(object):
         self.searching_album = ""
         if part is None:
             if len(self.list_albums) == 0:
-                self.list_albums = self.__search('album')
+                self.list_albums = await self.__search('album')
             return self.list_albums
         elif only_start:
-            self.list_query_results = self.__search_first_letter('album', part)
+            self.list_query_results = await self.__search_first_letter('album', part)
         else:
-            self.list_query_results = self.__search_partial('album', part)
+            self.list_query_results = await self.__search_partial('album', part)
         return self.list_query_results
 
     async def songs_get(self, part: str=None, only_start: bool=True) -> list:
@@ -427,12 +428,12 @@ class MPDController(object):
         self.searching_album = ""
         if part is None:
             if len(self.list_songs) == 0:
-                self.list_songs = self.__search('title')
+                self.list_songs = await self.__search('title')
             return self.list_songs
         elif only_start:
-            self.list_query_results = self.__search_first_letter('title', part)
+            self.list_query_results = await self.__search_first_letter('title', part)
         else:
-            self.list_query_results = self.__search_partial('title', part)
+            self.list_query_results = await self.__search_partial('title', part)
         return self.list_query_results
 
     def artist_albums_get(self, artist_name):
@@ -461,3 +462,20 @@ class MPDController(object):
         """
         self.searching_album = album_name
         return self.__search_of_type('title', 'album', album_name)
+
+    async def search(self, type: str, filter:str):
+        list_query_results = await self.mpd_client.search(type, filter)
+        df_results = pd.DataFrame(list_query_results)
+        if(type == 'artist'):
+            self.list_query_results = df_results \
+                .fillna('') \
+                .groupby(['artist']) \
+                .apply(lambda x: x.drop(['artist',], axis=1)) \
+                .groupby(['album']) \
+                .apply(lambda x: x.drop(['album',], axis=1).to_dict(orient='records'))
+        elif(type == 'album'):
+            df_results = df_results.loc[:, df_results.columns.intersection(['albumartist', 'album'])].drop_duplicates()
+
+        #df_results = df_results.fillna('')
+        #self.list_query_results = df_results.to_dict('records')
+        return self.list_query_results
