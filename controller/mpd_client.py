@@ -202,6 +202,14 @@ class MPDController(object):
         self.__last_update_time = 0  # For checking last update time (milliseconds)
         self.__status = None  # mpc's current status output
 
+         # Database search results
+        self.searching_artist = ""  # Search path user goes through
+        self.searching_album = ""
+        self.list_albums = []
+        self.list_artists = []
+        self.list_songs = []
+        self.list_query_results = []
+
     async def connect(self):
         """ Connects to mpd server.
             :return: Boolean indicating if successfully connected to mpd server.
@@ -214,6 +222,10 @@ class MPDController(object):
         current_song = await self.mpd_client.currentsong()
         self.now_playing.now_playing_set(current_song)
         return True
+
+    @property
+    def is_connected(self) -> bool:
+        return self.mpd_client.connected
 
     def disconnect(self):
         """ Closes the connection to the mpd server. """
@@ -302,9 +314,150 @@ class MPDController(object):
 
     async def player_control_get(self):
         """ :return: Current playback mode. """
-        await mpd.status_get()
+        await self.status_get()
         return self.__player_control
 
+    async def __search(self, tag_type):
+        """ Searches all entries of a certain type.
 
-logging.info("Start mpd controller")
-mpd = MPDController(host='mpd')
+        :param tag_type: ["artist"s, "album"s, song"title"s]
+        :return: A list with search results.
+        """
+        self.list_query_results = self.mpd_client.list(tag_type)
+        self.list_query_results.sort()
+        return self.list_query_results
+
+    async def __search_first_letter(self, tag_type, first_letter):
+        """ Searches all entries of a certain type matching a first letter
+
+        :param tag_type: ["artist"s, "album"s, song"title"s]
+        :param first_letter: The first letter
+        :return: A list with search results.
+        """
+        temp_results = []
+        for i in self.list_query_results:
+            if i[:1].upper() == first_letter.upper():
+                temp_results.append(i)
+        self.list_query_results = temp_results
+        return self.list_query_results
+
+    async def __search_partial(self, tag_type, part):
+        """ Searches all entries of a certain type partially matching search string.
+
+        :param tag_type: ["artist"s, "album"s, song"title"s]
+        :param part: Search string.
+        :return: A list with search results.
+        """
+        self.list_query_results = []
+        all_results = self.mpd_client.list(tag_type)
+        async for result in all_results:
+            if result['artist'].upper().find(part.upper()) > -1:
+                self.list_query_results.append(result)
+        return self.list_query_results
+
+    async def __search_of_type(self, type_result, type_filter, name_filter):
+        """ Searching one type depending on another type (very clear description isn't it?)
+
+        :param type_result: The type of result-set generated ["artist"s, "album"s, song"title"s]
+        :param type_filter: The type of filter used ["artist"s, "album"s, song"title"s]
+        :param name_filter: The name used to filter
+        :return:
+        """
+        if self.searching_artist == "" and self.searching_album == "":
+            self.list_query_results = self.mpd_client.list(type_result, type_filter, name_filter)
+        elif self.searching_artist != "" and self.searching_album == "":
+            self.list_query_results = self.mpd_client.list(type_result, 'artist', self.searching_artist,
+                                                           type_filter,
+                                                           name_filter)
+        elif self.searching_artist == "" and self.searching_album != "":
+            self.list_query_results = self.mpd_client.list(type_result, 'album', self.searching_album, type_filter,
+                                                           name_filter)
+        elif self.searching_artist != "" and self.searching_album != "":
+            self.list_query_results = self.mpd_client.list(type_result, 'artist', self.searching_artist, 'album',
+                                                           self.searching_album, type_filter, name_filter)
+        self.list_query_results.sort()
+        return self.list_query_results
+
+    async def artists_get(self, part: str=None, only_start: bool=True) -> list:
+        """ Retrieves all artist names or matching by first letter(s) or partial search string.
+
+        :param part: Search string
+        :param only_start: Only search as first letter(s).
+        :return: A list of matching artist names.
+        """
+        self.searching_artist = ""
+        self.searching_album = ""
+        if part is None:
+            if len(self.list_artists) == 0:
+                self.list_artists = await self.__search('artist')
+            return self.list_artists
+        elif only_start:
+            self.list_query_results = await self.__search_first_letter('artist', part)
+        else:
+            self.list_query_results = await self.__search_partial('artist', part)
+        return self.list_query_results
+
+    async def albums_get(self, part: str=None, only_start: bool=True) -> list:
+        """ Retrieves all album titles or matching by first letter(s) or partial search string.
+
+        :param part: Search string.
+        :param only_start: Only search as first letter(s).
+        :return: A list of matching album titles.
+        """
+        self.searching_artist = ""
+        self.searching_album = ""
+        if part is None:
+            if len(self.list_albums) == 0:
+                self.list_albums = self.__search('album')
+            return self.list_albums
+        elif only_start:
+            self.list_query_results = self.__search_first_letter('album', part)
+        else:
+            self.list_query_results = self.__search_partial('album', part)
+        return self.list_query_results
+
+    async def songs_get(self, part: str=None, only_start: bool=True) -> list:
+        """ Retrieves all song titles or matching by first letter(s) or partial search string
+
+        :param part: Search string
+        :param only_start: Only search as first letter(s)
+        :return: A list of matching song titles
+        """
+        self.searching_artist = ""
+        self.searching_album = ""
+        if part is None:
+            if len(self.list_songs) == 0:
+                self.list_songs = self.__search('title')
+            return self.list_songs
+        elif only_start:
+            self.list_query_results = self.__search_first_letter('title', part)
+        else:
+            self.list_query_results = self.__search_partial('title', part)
+        return self.list_query_results
+
+    def artist_albums_get(self, artist_name):
+        """ Retrieves artist's albums.
+
+        :param artist_name: The name of the artist to retrieve the albums of.
+        :return: A list of album titles.
+        """
+        self.searching_artist = artist_name
+        return self.__search_of_type('album', 'artist', artist_name)
+
+    def artist_songs_get(self, artist_name):
+        """ Retrieves artist's songs.
+
+        :param artist_name: The name of the artist to retrieve the songs of.
+        :return: A list of song titles
+        """
+        self.searching_artist = artist_name
+        return self.__search_of_type('title', 'artist', artist_name)
+
+    def album_songs_get(self, album_name):
+        """ Retrieves all song titles of an album.
+
+        :param album_name: The name of the album
+        :return: A list of song titles
+        """
+        self.searching_album = album_name
+        return self.__search_of_type('title', 'album', album_name)
