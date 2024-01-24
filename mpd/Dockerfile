@@ -6,6 +6,7 @@ ARG group=audio
 RUN apk -q update \
     && apk -q --no-progress add mpd \
     && apk -q --no-progress add mpc \
+    && apk -q --no-progress add mpdscribble \
     && apk -q --no-progress add avahi avahi-tools \
     && rm -rf /var/cache/apk/*
 
