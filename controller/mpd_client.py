@@ -393,6 +393,15 @@ class MPDController(object):
         self.searching_album = album_name
         return self.__search_of_type('title', 'album', album_name)
 
+    async def get_cover_binary(self, uri):
+        try:
+            cover = await self.mpd_client.albumart(uri)
+            binary = cover['binary']
+        except:
+            logging.warning("Could not retrieve album cover of %s", uri)
+            binary = None
+        return binary
+
     async def get_status(self):
         status = await self.mpd_client.status()
         return status
@@ -402,9 +411,10 @@ class MPDController(object):
 
         :return: List of dictionaries, with the song information and the information about it's position in the playlist
         """
-        playlist = await self.mpd_client.playlist()
         lst_songs = []
         playlist_pos = 1
+        playlist = await self.mpd_client.playlist()
+
         # Getting complete songs information
         for item in playlist:
             song = await self.mpd_client.find('file', item.replace('file: ', ''))
@@ -433,9 +443,9 @@ class MPDController(object):
         return list_query_results
 
     async def get_albums(self):
-        """ All artists in the database
+        """ All albums in the database
 
-        :return: A list of dictionaries for artists
+        :return: A list of dictionaries for albums with their artists
         """
         list_query_results = await self.mpd_client.list('album', 'group', 'albumartist')
         transformed_list = []
@@ -460,6 +470,7 @@ class MPDController(object):
         """
         if(type == 'song'):
             type = 'title'
+
         list_query_results = await self.mpd_client.search(type, filter)
         list_query_results = self.rename_song_dict_keys(list_query_results)
 

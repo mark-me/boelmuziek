@@ -3,12 +3,20 @@ from enum import Enum
 import asyncio
 from mpd_client import *
 from fastapi import FastAPI
+from fastapi.responses import Response
 import uvicorn
 
 class TagType(str, Enum):
     artist = "artist"
     album = "album"
     song = "song"
+
+class PlaylistControlType(str, Enum):
+    play = 'play'
+    pause = 'pause'
+    stop = 'stop',
+    next = 'next'
+    previous = 'previous'
 
 mpd = MPDController(host='localhost')#host='mpd')
 #asyncio.run(mpd.connect())
@@ -51,17 +59,38 @@ async def search_music(type: TagType, part_string: str):
                                    filter=part_string)
     return lst_results
 
+@app.get("/file-cover/")
+async def get_song_cover(file: str, responses = {200: {"content": {"image/png": {}}}}, response_class=Response):
+    await connect()
+    image_bytes: bytes = await mpd.get_cover_binary(file)
+    return Response(content=image_bytes, media_type="image/jpg")
+
 @app.get("/playlist/current-song/")
-async def current_song():
+async def get_current_song():
     await connect()
     current_song = await mpd.current_song()
     return current_song
+
+@app.get("/current-cover/")
+async def get_current_song_cover(responses = {200: {"content": {"image/png": {}}}}, response_class=Response):
+    await connect()
+    current_song = await mpd.current_song()
+    image_bytes: bytes = await mpd.get_cover_binary(current_song['file'])
+    return Response(content=image_bytes, media_type="image/jpg")
 
 @app.get("/playlist/")
 async def get_current_playlist():
     await connect()
     current_song = await mpd.playlist()
     return current_song
+
+@app.get("/playlist-control/")
+async def execute_player_control(action: PlaylistControlType):
+    await connect()
+    mpd.player_control_set(action)
+    task_control = asyncio.create_task(mpd.player_control_get())
+    control_status = await task_control
+    return control_status
 
 @app.get("/status/")
 async def status():
