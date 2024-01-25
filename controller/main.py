@@ -19,7 +19,7 @@ class PlaylistControlType(str, Enum):
     next = 'next'
     previous = 'previous'
 
-mpd = MPDController(host=host='mpd') #'localhost')
+mpd = MPDController(host='mpd') #'localhost') #
 #asyncio.run(mpd.connect())
 app = FastAPI()
 
