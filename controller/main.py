@@ -5,7 +5,6 @@ from mpd_client import *
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, Response
 import uvicorn
-from fastapi.staticfiles import StaticFiles
 
 class TagType(str, Enum):
     artist = "artist"
@@ -22,9 +21,6 @@ class PlaylistControlType(str, Enum):
 mpd = MPDController('localhost') #host='mpd') #
 #asyncio.run(mpd.connect())
 app = FastAPI()
-
-# Mount a static directory to serve HTML files
-#app.mount("/static", StaticFiles(directory="controller/static"), name="static")
 
 
 async def connect() -> bool:
