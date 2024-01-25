@@ -19,12 +19,12 @@ class PlaylistControlType(str, Enum):
     next = 'next'
     previous = 'previous'
 
-mpd = MPDController(host='mpd') #'localhost') #
+mpd = MPDController('localhost') #host='mpd') #
 #asyncio.run(mpd.connect())
 app = FastAPI()
 
 # Mount a static directory to serve HTML files
-app.mount("/static", StaticFiles(directory="controller/static"), name="static")
+#app.mount("/static", StaticFiles(directory="controller/static"), name="static")
 
 
 async def connect() -> bool:
