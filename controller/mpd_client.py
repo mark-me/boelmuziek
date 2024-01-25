@@ -343,20 +343,6 @@ class MPDController(object):
         self.list_query_results = temp_results
         return self.list_query_results
 
-    async def __search_partial(self, tag_type, part):
-        """ Searches all entries of a certain type partially matching search string.
-
-        :param tag_type: ["artist"s, "album"s, song"title"s]
-        :param part: Search string.
-        :return: A list with search results.
-        """
-        self.list_query_results = []
-        all_results = self.mpd_client.list(tag_type)
-        async for result in all_results:
-            if result[tag_type].upper().find(part.upper()) > -1:
-                self.list_query_results.append(result)
-        return self.list_query_results
-
     async def __search_of_type(self, type_result, type_filter, name_filter):
         """ Searching one type depending on another type (very clear description isn't it?)
 
@@ -378,63 +364,6 @@ class MPDController(object):
             self.list_query_results = self.mpd_client.list(type_result, 'artist', self.searching_artist, 'album',
                                                            self.searching_album, type_filter, name_filter)
         self.list_query_results.sort()
-        return self.list_query_results
-
-    async def artists_get(self, part: str=None, only_start: bool=True) -> list:
-        """ Retrieves all artist names or matching by first letter(s) or partial search string.
-
-        :param part: Search string
-        :param only_start: Only search as first letter(s).
-        :return: A list of matching artist names.
-        """
-        self.searching_artist = ""
-        self.searching_album = ""
-        if part is None:
-            if len(self.list_artists) == 0:
-                self.list_artists = await self.__search('artist')
-            return self.list_artists
-        elif only_start:
-            self.list_query_results = await self.__search_first_letter('artist', part)
-        else:
-            self.list_query_results = await self.__search_partial('artist', part)
-        return self.list_query_results
-
-    async def albums_get(self, part: str=None, only_start: bool=True) -> list:
-        """ Retrieves all album titles or matching by first letter(s) or partial search string.
-
-        :param part: Search string.
-        :param only_start: Only search as first letter(s).
-        :return: A list of matching album titles.
-        """
-        self.searching_artist = ""
-        self.searching_album = ""
-        if part is None:
-            if len(self.list_albums) == 0:
-                self.list_albums = await self.__search('album')
-            return self.list_albums
-        elif only_start:
-            self.list_query_results = await self.__search_first_letter('album', part)
-        else:
-            self.list_query_results = await self.__search_partial('album', part)
-        return self.list_query_results
-
-    async def songs_get(self, part: str=None, only_start: bool=True) -> list:
-        """ Retrieves all song titles or matching by first letter(s) or partial search string
-
-        :param part: Search string
-        :param only_start: Only search as first letter(s)
-        :return: A list of matching song titles
-        """
-        self.searching_artist = ""
-        self.searching_album = ""
-        if part is None:
-            if len(self.list_songs) == 0:
-                self.list_songs = await self.__search('title')
-            return self.list_songs
-        elif only_start:
-            self.list_query_results = await self.__search_first_letter('title', part)
-        else:
-            self.list_query_results = await self.__search_partial('title', part)
         return self.list_query_results
 
     def artist_albums_get(self, artist_name):
@@ -464,13 +393,76 @@ class MPDController(object):
         self.searching_album = album_name
         return self.__search_of_type('title', 'album', album_name)
 
-    async def search(self, type: str, filter:str):
-        """ Retrieves all song titles of an album.
+    async def get_status(self):
+        status = await self.mpd_client.status()
+        return status
+
+    async def playlist(self):
+        """ Current playlist
+
+        :return: List of dictionaries, with the song information and the information about it's position in the playlist
+        """
+        playlist = await self.mpd_client.playlist()
+        lst_songs = []
+        playlist_pos = 1
+        # Getting complete songs information
+        for item in playlist:
+            song = await self.mpd_client.find('file', item.replace('file: ', ''))
+            song[0]['playlist_pos'] = playlist_pos
+            lst_songs = lst_songs + song
+            playlist_pos = playlist_pos + 1
+        lst_songs = self.rename_song_dict_keys(lst_songs)
+        return lst_songs
+
+    async def current_song(self):
+        """ Current song in the playlist, regardless whether it is playing, paused or stopped
 
         :param type: The name of the album
-        :return: A list of song titles
+        :return: A dictionary, with the song information and the information about it's position in the playlist
         """
+        playing = await self.mpd_client.currentsong()
+        playing = self.rename_song_dict_keys(playing)
+        return playing
+
+    async def get_artists(self):
+        """ All artists in the database
+
+        :return: A list of dictionaries for artists
+        """
+        list_query_results = await self.mpd_client.list('artist')
+        return list_query_results
+
+    async def get_albums(self):
+        """ All artists in the database
+
+        :return: A list of dictionaries for artists
+        """
+        list_query_results = await self.mpd_client.list('album', 'group', 'albumartist')
+        transformed_list = []
+
+        for entry in list_query_results:
+            albumartist = entry["albumartist"]
+            albums = entry["album"]
+
+            if isinstance(albums, list):
+                for album in albums:
+                    transformed_list.append({"albumartist": albumartist, "album": album})
+            else:
+                transformed_list.append({"albumartist": albumartist, "album": albums})
+
+        return transformed_list
+
+    async def search(self, type: str, filter:str):
+        """ Searches for artists, albums or songs.
+
+        :param type: The name of the album
+        :return: A list of dictionaries, with a hierarchy depending on the type of search.
+        """
+        if(type == 'song'):
+            type = 'title'
         list_query_results = await self.mpd_client.search(type, filter)
+        list_query_results = self.rename_song_dict_keys(list_query_results)
+
         if(type == 'artist'):
             self.list_query_results = self.__nest_artist_album(list_query_results)
         elif(type == 'album'):
@@ -480,7 +472,41 @@ class MPDController(object):
 
         return self.list_query_results
 
+    def rename_song_dict_keys(self, data):
+        """
+        Rename the song key within a list of dictionaries or a single dictionary.
+
+        Parameters:
+        - data: List of dictionaries or a single dictionary
+
+        Returns:
+        - A new list of dictionaries or a new dictionary with the key renamed from 'title' to 'song'
+        """
+        old_key_name = 'title'
+        new_key_name = 'song'
+
+        if isinstance(data, list):
+            # If data is a list of dictionaries
+            return [{new_key_name if key == old_key_name else key: value for key, value in item.items()} for item in data]
+        elif isinstance(data, dict):
+            # If data is a single dictionary
+            if old_key_name in data:
+                data[new_key_name] = data.pop(old_key_name)
+            return data
+        else:
+            # Handle other types or raise an exception if needed
+            raise ValueError("Input data must be a list of dictionaries or a single dictionary.")
+
     def __nest_artist_album(self, list_dict_files):
+        """
+        Nesting of files within a hierarchy of artists and their albums
+
+        Parameters:
+        - list_dict_files: List of dictionaries that represent music files
+
+        Returns:
+        - list of dictionaries that are grouped in a hierarchy by artist and album
+        """
         # Initialize a dictionary to store the result
         result_dict = {}
 
@@ -506,6 +532,15 @@ class MPDController(object):
         return result_list
 
     def __nest_album(self, list_dict_files):
+        """
+        Nesting of files within a hierarchy of albums
+
+        Parameters:
+        - list_dict_files: List of dictionaries that represent music files
+
+        Returns:
+        - list of dictionaries that are grouped in a hierarchy by album
+        """
         # Initialize a dictionary to store the result
         result_dict = {}
 
