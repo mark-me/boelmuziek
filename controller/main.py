@@ -17,21 +17,7 @@ async def read_root():
     mpd_control_status = await task_control
     return {"MPD status": mpd_control_status}
 
-@app.get("/search/{type}/{part_string}")
-async def read_artists(type: str, part_string: str):
-    if(not mpd.is_connected):
-        task_connect = asyncio.create_task(mpd.connect())
-        is_connected = await task_connect
-    lst_results = []
-    if(type=='artist'):
-        lst_results = await mpd.artists_get(part=part_string, only_start=False)
-    elif(type=='album'):
-        lst_results = await mpd.albums_get(part=part_string, only_start=False)
-    elif(type=='title'):
-        lst_results = await mpd.songs_get(part=part_string, only_start=False)
-    return lst_results
-
-@app.get("/lookfor/{type}/{part_string}")
+@app.get("/search/{type}")
 async def search_music(type: str, part_string: str):
     if(not mpd.is_connected):
         task_connect = asyncio.create_task(mpd.connect())

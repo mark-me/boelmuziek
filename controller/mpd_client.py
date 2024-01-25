@@ -26,6 +26,7 @@ import time
 import pandas as pd
 from mpd.asyncio import MPDClient
 from collections import deque
+from collections import defaultdict
 
 MPD_TYPE_ARTIST = 'artist'
 MPD_TYPE_ALBUM = 'album'
@@ -464,18 +465,62 @@ class MPDController(object):
         return self.__search_of_type('title', 'album', album_name)
 
     async def search(self, type: str, filter:str):
-        list_query_results = await self.mpd_client.search(type, filter)
-        df_results = pd.DataFrame(list_query_results)
-        if(type == 'artist'):
-            self.list_query_results = df_results \
-                .fillna('') \
-                .groupby(['artist']) \
-                .apply(lambda x: x.drop(['artist',], axis=1)) \
-                .groupby(['album']) \
-                .apply(lambda x: x.drop(['album',], axis=1).to_dict(orient='records'))
-        elif(type == 'album'):
-            df_results = df_results.loc[:, df_results.columns.intersection(['albumartist', 'album'])].drop_duplicates()
+        """ Retrieves all song titles of an album.
 
-        #df_results = df_results.fillna('')
-        #self.list_query_results = df_results.to_dict('records')
+        :param type: The name of the album
+        :return: A list of song titles
+        """
+        list_query_results = await self.mpd_client.search(type, filter)
+        if(type == 'artist'):
+            self.list_query_results = self.__nest_artist_album(list_query_results)
+        elif(type == 'album'):
+            self.list_query_results = self.__nest_album(list_query_results)
+        else:
+            self.list_query_results = list_query_results
+
         return self.list_query_results
+
+    def __nest_artist_album(self, list_dict_files):
+        # Initialize a dictionary to store the result
+        result_dict = {}
+
+        # Iterate over each dictionary in the list
+        for file_data in list_dict_files:
+            artist = file_data['artist']
+            album = file_data.get('album', '')  # Get 'album' with a default value of an empty string
+            file_dict = {key: value for key, value in file_data.items() if key not in ['artist', 'album']}
+
+            # Check if the artist is already in the result_dict
+            if artist in result_dict:
+                # Check if the album is already in the artist's dictionary
+                if album in result_dict[artist]:
+                    result_dict[artist][album]['files'].append(file_dict)
+                else:
+                    result_dict[artist][album] = {'album': album, 'files': [file_dict]}
+            else:
+                result_dict[artist] = {album: {'album': album, 'files': [file_dict]}}
+
+        # Convert the result_dict to a list of dictionaries
+        result_list = [{'artist': artist, 'albums': list(albums.values())} for artist, albums in result_dict.items()]
+
+        return result_list
+
+    def __nest_album(self, list_dict_files):
+        # Initialize a dictionary to store the result
+        result_dict = {}
+
+        # Iterate over each dictionary in the list
+        for file_data in list_dict_files:
+            album = file_data.get('album', '')  # Get 'album' with a default value of an empty string
+            file_dict = {key: value for key, value in file_data.items() if key not in ['file']}
+
+            # Check if the album is already in the result_dict
+            if album in result_dict:
+                result_dict[album]['files'].append(file_dict)
+            else:
+                result_dict[album] = {'album': album, 'files': [file_dict]}
+
+        # Convert the result_dict to a list of dictionaries
+        result_list = list(result_dict.values())
+
+        return result_list
