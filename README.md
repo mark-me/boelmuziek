@@ -9,18 +9,36 @@ A music player that offers diverse navigation options through your music library
 ### Functional
 ![Functional components](images/components-functional.png)
 
-This setup looks a bit busy and this is my attempt to explain:
+This schematic looks a bit busy, so let me attempt to explain:
 
-* The **UI** is all the user will see. It allows the user to search for music and playing it. The user can switch between streaming music your phone (for example) and the multi-room streamer. The user can control the volume on the client stream, the individual room clients of all room clients simultaneously.
+* The **UI** is all the user will see. It allows the user to:
+  * search for music,,
+  * playing music,
+  * switch between streaming music your phone (for example) and the multi-room streamer and
+  * control the volume on the client stream, the individual room clients of all room clients simultaneously.
 * The UI talks to the **Controller** to:
-    * query the music collection,
-    * control playback,
-    * switch between client and multi-room output and
-    * control volume
-*
+  * query the music collection,
+  * control playback,
+  * switch between client and multi-room output and
+  * control volume.
+* The **Client streamer** can be used to receive playback from the MPD server on the client you are using the app on.
+* The **Multi-room streamer** is where all multi-room clients receive their music stream from and can be used to control volume on the **Room receivers**.
+* The **Music Library Player** is where the music collection and playback is served
 
 ### Technical
+
+This section shows which languages and/or projects are used to implement the functional components.
+
+* The **UI** is implemented needed to be accessible from any kind of device, so it came down to....
+* The **Client streamer** is [Icecast](https://icecast.org/), which you can compare to a radio station that is tuned in to whatever you are playing.
+* The **Multi-room streamer** solution [Snapcast](https://github.com/badaix/snapcast) is used because it is awesome. I've used this setup for a long time and it is just: AWESOME!
+* The **Music Library Player** is [MPD](https://musicpd.org/). Reliable, flexible and around since the dawn of civilization (2003).
+* The **Controller** is where several back-end services  are called so the UI developer doesn't need to worry about handling each of the component's quirks and hopefully get some kind of unifief interface. Since the author is uses Python, [FastAPI](https://fastapi.tiangolo.com/) seemed a viable solution.
+
+
 ![Technical components](images/components-technical.png)
+
+
 
 ## Set-up
 
