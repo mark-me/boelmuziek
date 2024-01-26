@@ -23,7 +23,7 @@ This schematic looks a bit busy, so let me attempt to explain:
   * control volume.
 * The **Client streamer** can be used to receive playback from the MPD server on the client you are using the app on.
 * The **Multi-room streamer** is where all multi-room clients receive their music stream from and can be used to control volume on the **Room receivers**.
-* The **Music Library Player** is where the music collection and playback is served
+* The **Music Library Player** is where the music collection resides who's playback is streamed to the **Client streamer** and/or the **Multi-room streamer**.
 
 ### Technical
 

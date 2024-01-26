@@ -442,43 +442,45 @@ class MPDController(object):
         playing = self.rename_song_dict_keys(playing)
         return playing
 
-    async def playlist_add(self, type_asset: str, name: str):
+    async def playlist_add(self, type_asset: str, name: str, play: bool=False, replace=False):
         """ Adds a music asset to the current playlist
 
         :param type: The name of the album
         :param filter: The string that should be searched against, the searches are done with partial matching
+        :param unknown: I want to play this now by: replacing the playlist, adding it right after
         """
-        list_songs = []
+        #TODO: Add option for replacing playlist (and play)
+        lst_songs = []
         if(not type_asset in ['artist', 'album', 'file']):
             return [{'error': 'incorrect search type'}]
 
-        list_songs = await self.mpd_client.find(type_asset, name)
-        if(list_songs == None or len(list_songs) == 0):
+        lst_songs = await self.mpd_client.find(type_asset, name)
+        if(lst_songs == None or len(lst_songs) == 0):
             return({'error': type_asset + ' \'' + name + '\' not found.'})
 
         # Add songs to the current playlist
-        for song in list_songs:
+        for song in lst_songs:
             song_added = await self.mpd_client.findadd('file', song['file'])
 
-        return list_songs
+        return lst_songs
 
     async def get_artists(self):
         """ All artists in the database
 
         :return: A list of dictionaries for artists
         """
-        list_query_results = await self.mpd_client.list('artist')
-        return list_query_results
+        lst_query_results = await self.mpd_client.list('artist')
+        return lst_query_results
 
     async def get_albums(self):
         """ All albums in the database
 
         :return: A list of dictionaries for albums with their artists
         """
-        list_query_results = await self.mpd_client.list('album', 'group', 'albumartist')
+        lst_query_results = await self.mpd_client.list('album', 'group', 'albumartist')
         transformed_list = []
 
-        for entry in list_query_results:
+        for entry in lst_query_results:
             albumartist = entry["albumartist"]
             albums = entry["album"]
 
@@ -491,11 +493,11 @@ class MPDController(object):
         return transformed_list
 
     async def get_artist_albums(self, name_artist:str) -> list:
-        list_query_results = []
-        list_query_results = await self.mpd_client.find('artist', name_artist)
-        list_query_results = self.rename_song_dict_keys(list_query_results)
-        list_query_results = self.__nest_album(list_query_results)
-        return list_query_results
+        lst_query_results = []
+        lst_query_results = await self.mpd_client.find('artist', name_artist)
+        lst_query_results = self.rename_song_dict_keys(lst_query_results)
+        lst_query_results = self.__nest_album(lst_query_results)
+        return lst_query_results
 
     async def search(self, type: str, filter:str):
         """ Searches for artists, albums or songs.
