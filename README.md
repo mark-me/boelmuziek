@@ -9,6 +9,16 @@ A music player that offers diverse navigation options through your music library
 ### Functional
 ![Functional components](images/components-functional.png)
 
+This setup looks a bit busy and this is my attempt to explain:
+
+* The **UI** is all the user will see. It allows the user to search for music and playing it. The user can switch between streaming music your phone (for example) and the multi-room streamer. The user can control the volume on the client stream, the individual room clients of all room clients simultaneously.
+* The UI talks to the **Controller** to:
+    * query the music collection,
+    * control playback,
+    * switch between client and multi-room output and
+    * control volume
+*
+
 ### Technical
 ![Technical components](images/components-technical.png)
 
