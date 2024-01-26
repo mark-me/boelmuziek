@@ -6,10 +6,15 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, Response
 import uvicorn
 
-class TagType(str, Enum):
+class TagTypeSearch(str, Enum):
     artist = "artist"
     album = "album"
     song = "song"
+
+class TagTypeControl(str, Enum):
+    artist = "artist"
+    album = "album"
+    file = "file"
 
 class PlaylistControlType(str, Enum):
     play = 'play'
@@ -31,7 +36,7 @@ async def connect() -> bool:
     return is_connected
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
+async def welcome_page(request: Request):
     content = """
     <html>
         <head>
@@ -54,14 +59,14 @@ async def get_artists():
     return lst_results
 
 @app.get("/library/albums/")
-async def get_artists():
+async def get_albums():
     await connect()
     lst_results = []
     lst_results = await mpd.get_albums()
     return lst_results
 
 @app.get("/library/search/{type}")
-async def search_music(type: TagType, part_string: str):
+async def search_music(type: TagTypeSearch, part_string: str):
     await connect()
     lst_results = []
     lst_results = await mpd.search(type=type.value,
@@ -79,6 +84,13 @@ async def get_current_playlist():
     await connect()
     current_song = await mpd.playlist()
     return current_song
+
+@app.get("/playlist/add/{type}")
+async def add_to_playlist(type: TagTypeControl, name: str):
+    await connect()
+    added_songs = await mpd.playlist_add(type_asset=type.value,
+                                         name=name)
+    return added_songs
 
 @app.get("/playlist/current-song/")
 async def get_current_song():
@@ -106,6 +118,18 @@ async def status():
     await connect()
     status = await mpd.get_status()
     return status
+
+@app.get("/output/list")
+async def list_outputs():
+    await connect()
+    outputs = await mpd.outputs_get()
+    return outputs
+
+@app.get("/output/toggle")
+async def toggle_output(id_output: int):
+    await connect()
+    outputs = await mpd.output_toggle(id_output)
+    return outputs
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5080)

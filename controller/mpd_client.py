@@ -314,6 +314,15 @@ class MPDController(object):
         except:
             logging.error("Could not send %s command to MPD", play_status)
 
+    async def outputs_get(self) -> list:
+        outputs = await self.mpd_client.outputs()
+        return outputs
+
+    async def output_toggle(self, id_output: int):
+        test = await self.mpd_client.toggleoutput(id_output)
+        outputs = await self.mpd_client.outputs()
+        return outputs[id_output]
+
     async def player_control_get(self):
         """ :return: Current playback mode. """
         await self.status_get()
@@ -427,12 +436,33 @@ class MPDController(object):
     async def current_song(self):
         """ Current song in the playlist, regardless whether it is playing, paused or stopped
 
-        :param type: The name of the album
         :return: A dictionary, with the song information and the information about it's position in the playlist
         """
         playing = await self.mpd_client.currentsong()
         playing = self.rename_song_dict_keys(playing)
         return playing
+
+    async def playlist_add(self, type_asset: str, name: str):
+        """ Adds a music asset to the current playlist
+
+        :param type: The name of the album
+        :param filter: The string that should be searched against, the searches are done with partial matching
+        """
+        list_songs = []
+        if(not type_asset in ['artist', 'album', 'song']):
+            return [{'error': 'incorrect search type'}]
+        if(type_asset == 'song'): # To match MPD internal naming convention
+            type_asset = 'title'
+
+        list_songs = await self.mpd_client.find(type_asset, name)
+        if(list_songs == None or len(list_songs) == 0):
+            return({'error': type_asset + ' \'' + name + '\' not found.'})
+
+        # Add songs to the current playlist
+        for song in list_songs:
+            song_added = await self.mpd_client.findadd('file', song['file'])
+
+        return list_songs
 
     async def get_artists(self):
         """ All artists in the database
@@ -465,14 +495,19 @@ class MPDController(object):
     async def search(self, type: str, filter:str):
         """ Searches for artists, albums or songs.
 
-        :param type: The name of the album
+        :param type: The type of music asset that is being searched for (artist, album or song)
+        :param filter: The string that should be searched against, the searches are done with partial matching
         :return: A list of dictionaries, with a hierarchy depending on the type of search.
         """
-        if(type == 'song'):
+        if(not type in ['artist', 'album', 'song']):
+            return [{'error': 'incorrect search type'}]
+        if(type == 'song'): # To match MPD internal naming convention
             type = 'title'
 
         list_query_results = await self.mpd_client.search(type, filter)
         list_query_results = self.rename_song_dict_keys(list_query_results)
+        if(len(list_query_results) == 0):
+            return({'error': type + ' ' + filter + ' not found.'})
 
         if(type == 'artist'):
             self.list_query_results = self.__nest_artist_album(list_query_results)
