@@ -33,7 +33,7 @@ This section shows which languages and/or projects are used to implement the fun
 * The **Client streamer** is [Icecast](https://icecast.org/), which you can compare to a radio station that is tuned in to whatever you are playing.
 * The **Multi-room streamer** solution [Snapcast](https://github.com/badaix/snapcast) is used because it is awesome. Nuf said... Or is it? i've used this setup for over two years time. And I don't know if I told your before: it is just: AWESOME!
 * The **Music Library Player** is [MPD](https://musicpd.org/). Reliable, flexible and around since the dawn of civilization (2003).
-* The **Controller** is where several back-end services  are called so the UI developer doesn't need to worry about handling each of the component's quirks and hopefully get some kind of unifief interface. Since the author is uses Python, [FastAPI](https://fastapi.tiangolo.com/) seemed a viable solution.
+* The **Controller** is where several back-end services  are called so the UI developer doesn't need to worry about handling each of the component's quirks and hopefully get some kind of unifief interface. Since the author is using Python, [FastAPI](https://fastapi.tiangolo.com/) seemed a viable solution.
 
 
 ![Technical components](images/components-technical.png)
