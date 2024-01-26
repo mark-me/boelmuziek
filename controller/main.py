@@ -37,10 +37,6 @@ async def mpd_connect() -> bool:
         is_connected = await task_connect
     return is_connected
 
-# async def snapserver_connect() -> bool:
-#     task_connect = asyncio.create_task(snapserver.connect(loop))
-#     is_connected = await task_connect
-#     return is_connected
 
 @app.get("/", response_class=HTMLResponse)
 async def welcome_page(request: Request):

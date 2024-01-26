@@ -449,10 +449,8 @@ class MPDController(object):
         :param filter: The string that should be searched against, the searches are done with partial matching
         """
         list_songs = []
-        if(not type_asset in ['artist', 'album', 'song']):
+        if(not type_asset in ['artist', 'album', 'file']):
             return [{'error': 'incorrect search type'}]
-        if(type_asset == 'song'): # To match MPD internal naming convention
-            type_asset = 'title'
 
         list_songs = await self.mpd_client.find(type_asset, name)
         if(list_songs == None or len(list_songs) == 0):
