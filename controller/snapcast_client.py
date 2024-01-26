@@ -4,14 +4,40 @@ import snapcast.control
 class SnapServer():
     def __init__(self, host) -> None:
         self.host = host
-        self.server = None
-
-    async def connect(self):
-        self.server = await snapcast.control.create_server(loop=loop, host=self.host)
+        self.loop = asyncio.get_event_loop() # Loop needed for snapserver
+        self.server = self.loop.run_until_complete(
+            snapcast.control.create_server(self.loop, host)
+            )
 
     async def list_clients(self):
        # print all client names
-        return self.server.clients
+        lst_clients = []
+        clients = self.server.clients
+        for client in clients:
+            lst_clients.append(
+                {
+                    'friendly_name': client.friendly_name,
+                    'identifier': client.identifier,
+                    'connected': client.connected,
+                    'muted': client.muted,
+                    'volume': client.volume,
+                    'version': client.version,
+                    'name': client.name
+                }
+            )
+        return lst_clients
+
+    async def client_toggle_mute(self, id: str):
+        clients = self.server.clients
+        for client in clients:
+            if(client.identifier == id):
+                mute = not client.muted
+                client.set_muted(mute)
+                return [{
+                    'friendly_name': client.friendly_name,
+                    'identifier': client.identifier,
+                    'muted':client.muted
+                         }]
 
     async def list_groups(self):
         return self.server.groups
