@@ -492,6 +492,13 @@ class MPDController(object):
 
         return transformed_list
 
+    async def get_artist_albums(self, name_artist:str) -> list:
+        list_query_results = []
+        list_query_results = await self.mpd_client.find('artist', name_artist)
+        list_query_results = self.rename_song_dict_keys(list_query_results)
+        list_query_results = self.__nest_album(list_query_results)
+        return list_query_results
+
     async def search(self, type: str, filter:str):
         """ Searches for artists, albums or songs.
 

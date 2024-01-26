@@ -59,10 +59,16 @@ async def get_artists():
     return lst_results
 
 @app.get("/library/albums/")
-async def get_albums():
+async def get_albums(artist_name: str | None = None):
     await connect()
     lst_results = []
-    lst_results = await mpd.get_albums()
+
+    # All albums if artist name is not supplied
+    if(artist_name == None):
+        lst_results = await mpd.get_albums()
+    else:
+        lst_results = await mpd.get_artist_albums(artist_name)
+
     return lst_results
 
 @app.get("/library/search/{type}")
