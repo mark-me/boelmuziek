@@ -66,3 +66,12 @@ How each components is created can be found within it's own subdirectory:
 ├── ui          'Developing UI'
 └── ympd        'Contains a temporary UI that will de replaced by the developing ui'
 ```
+
+## Future developments
+
+### Functional
+![Functional components](images/components-functional-future.png)
+
+### Technical
+
+![Technical components](images/components-technical-future.png)
