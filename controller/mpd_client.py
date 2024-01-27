@@ -23,6 +23,7 @@ import logging
 
 import os
 import time
+import imghdr
 import pandas as pd
 from mpd.asyncio import MPDClient
 from collections import deque
@@ -143,6 +144,7 @@ class MPDNowPlaying(object):
             logging.warning("Could not retrieve album cover of %s", uri)
             binary = None
         return binary
+
 
     async def get_cover_art(self):
         blob_cover = await self.get_cover_binary(self.file)

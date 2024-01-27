@@ -1,10 +1,10 @@
-from typing import Union
 from enum import Enum
+from io import BytesIO
 import asyncio
 from mpd_client import *
 from snapcast_client import *
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, Response, StreamingResponse
 import uvicorn
 
 class TagTypeSearch(str, Enum):
@@ -37,6 +37,14 @@ async def mpd_connect() -> bool:
         is_connected = await task_connect
     return is_connected
 
+# Function to determine image format (PNG or JPG) based on magic bytes
+def determine_image_format(image_data: bytes) -> str:
+    if image_data.startswith(b'\x89PNG\r\n\x1a\n'):
+        return "image/png"
+    elif image_data.startswith(b'\xff\xd8'):
+        return "image/jpeg"
+    else:
+        raise ValueError("Unsupported image format")
 
 @app.get("/", response_class=HTMLResponse)
 async def welcome_page(request: Request):
@@ -66,6 +74,7 @@ async def get_albums(artist_name: str | None = None):
     await mpd_connect()
     lst_results = []
 
+
     # All albums if artist name is not supplied
     if(artist_name == None):
         lst_results = await mpd.get_albums()
@@ -83,10 +92,12 @@ async def search_music(type: TagTypeSearch, part_string: str):
     return lst_results
 
 @app.get("/library/cover/")
-async def get_song_cover(file: str, responses = {200: {"content": {"image/png": {}}}}, response_class=Response):
+async def get_song_cover(file: str):
     await mpd_connect()
     image_bytes: bytes = await mpd.get_cover_binary(file)
-    return Response(content=image_bytes, media_type="image/jpg")
+    image_format = determine_image_format(image_bytes)
+    headers = {"Content-Type": image_format}
+    return StreamingResponse(BytesIO(image_bytes), headers=headers)
 
 @app.get("/playlist/")
 async def get_current_playlist():
@@ -108,11 +119,13 @@ async def get_current_song():
     return current_song
 
 @app.get("/playlist/current-cover/")
-async def get_current_song_cover(responses = {200: {"content": {"image/png": {}}}}, response_class=Response):
+async def get_current_song_cover():
     await mpd_connect()
     current_song = await mpd.current_song()
     image_bytes: bytes = await mpd.get_cover_binary(current_song['file'])
-    return Response(content=image_bytes, media_type="image/jpg")
+    image_format = determine_image_format(image_bytes)
+    headers = {"Content-Type": image_format}
+    return StreamingResponse(BytesIO(image_bytes), headers=headers)
 
 @app.get("/playlist/control/")
 async def execute_player_control(action: PlaylistControlType):
