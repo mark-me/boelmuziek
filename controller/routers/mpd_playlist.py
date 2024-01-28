@@ -36,7 +36,8 @@ class PlaylistItem(BaseModel):
 
 class PlaylistItems(BaseModel):
     at_position: int
-    start_playing: bool
+    start_playing: bool = False
+    clear_playlist: bool = False
     files: List[PlaylistItem]
 
 @router.get("/")
@@ -74,10 +75,9 @@ async def get_current_song_cover():
 @router.get("/control/")
 async def execute_player_control(action: PlaylistControlType):
     await mpd_connect()
-    mpd.player_control_set(action)
-    task_control = asyncio.create_task(mpd.player_control_get())
-    control_status = await task_control
-    return control_status
+    mpd.player_control_set(action.value)
+    control_status = await mpd.get_status()
+    return control_status['state']
 
 @router.get("/clear/")
 async def clear_playlist():

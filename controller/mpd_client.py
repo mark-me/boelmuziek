@@ -21,54 +21,12 @@
 """
 import logging
 
-import os
 import time
-from datetime import datetime
 from dateutil import parser
 from mpd.asyncio import MPDClient
-from collections import deque
-from collections import defaultdict
 
-MPD_TYPE_ARTIST = 'artist'
-MPD_TYPE_ALBUM = 'album'
-MPD_TYPE_SONGS = 'title'
 
 DEFAULT_COVER = 'images/default_cover_art.png'
-TEMP_PLAYLIST_NAME = '_pi-jukebox_temp'
-
-
-def retry(func, ex_type=Exception, limit=0, wait_ms=100, wait_increase_ratio=2, logger=None):
-    """
-    Retry a function invocation until no exception occurs
-    :param func: function to invoke
-    :param ex_type: retry only if exception is subclass of this type
-    :param limit: maximum number of invocation attempts
-    :param wait_ms: initial wait time after each attempt in milliseconds.
-    :param wait_increase_ratio: increase wait period by multiplying this value after each attempt.
-    :param logger: if not None, retry attempts will be logged to this logging.logger
-    :return: result of first successful invocation
-    :raises: last invocation exception if attempts exhausted or exception is not an instance of ex_type
-    """
-    attempt = 1
-    while True:
-        try:
-            return func()
-        except Exception as ex:
-            if not isinstance(ex, ex_type):
-                raise ex
-            if 0 < limit <= attempt:
-                if logger:
-                    logger.warning("no more attempts")
-                raise ex
-
-            if logger:
-                logger.error("failed execution attempt #%d", attempt, exc_info=ex)
-
-            attempt += 1
-            if logger:
-                logger.info("waiting %d ms before attempt #%d", wait_ms, attempt)
-            time.sleep(wait_ms / 1000)
-            wait_ms *= wait_increase_ratio
 
 
 class MPDController(object):
@@ -102,18 +60,6 @@ class MPDController(object):
         self.mpd_client.close()
         self.mpd_client.disconnect()
 
-    async def status_get(self):
-        """ Updates mpc data, returns True when status data is updated. Wait at
-            least 'update_interval' milliseconds before updating mpc status data.
-
-            :return: Returns boolean whether updated or not.
-        """
-        time_elapsed = round(time.time()*1000) - self.__last_update_time
-        if round(time.time()*1000) > self.update_interval > time_elapsed:
-            return False
-        self.__last_update_time = round(time.time()*1000)  # Reset update
-        return await self.__parse_mpc_status()  # Parse mpc status output
-
     def player_control_set(self, play_status):
         """ Controls playback
 
@@ -122,10 +68,7 @@ class MPDController(object):
         logging.info("MPD player control %s", play_status)
         try:
             if play_status == 'play':
-                if self.__player_control == 'pause':
-                    self.mpd_client.play()
-                else:
-                    self.mpd_client.pause(0)
+                self.mpd_client.play()
             elif play_status == 'pause':
                 self.mpd_client.pause(1)
             elif play_status == 'stop':
@@ -145,11 +88,6 @@ class MPDController(object):
         test = await self.mpd_client.toggleoutput(id_output)
         outputs = await self.mpd_client.outputs()
         return outputs[id_output]
-
-    async def player_control_get(self):
-        """ :return: Current playback mode. """
-        await self.status_get()
-        return self.__player_control
 
     async def __search(self, tag_type):
         """ Searches all entries of a certain type.
@@ -225,7 +163,7 @@ class MPDController(object):
         self.searching_album = album_name
         return self.__search_of_type('title', 'album', album_name)
 
-    async def get_cover_binary(self, uri):
+    async def __get_cover_binary(self, uri):
         try:
             cover = await self.mpd_client.albumart(uri)
             binary = cover['binary']
@@ -234,7 +172,7 @@ class MPDController(object):
             binary = None
         return binary
 
-    def determine_image_format(self, image_data: bytes) -> str:
+    def __determine_image_format(self, image_data: bytes) -> str:
         """Function to determine image format (PNG or JPG) based on magic bytes"""
         if image_data.startswith(b'\x89PNG\r\n\x1a\n'):
             return "image/png"
@@ -244,8 +182,8 @@ class MPDController(object):
             raise ValueError("Unsupported image format")
 
     async def get_cover_art(self, uri):
-        image_bytes: bytes = await self.get_cover_binary(uri=uri)
-        image_format = self.determine_image_format(image_bytes)
+        image_bytes: bytes = await self.__get_cover_binary(uri=uri)
+        image_format = self.__determine_image_format(image_bytes)
         return {'image_format': image_format, 'image': image_bytes}
 
     async def get_status(self):
@@ -259,6 +197,10 @@ class MPDController(object):
         for item in lst_bool:
             if item in status.keys():
                 status[item] = bool(int(status[item]))
+        lst_float = ['elapsed', 'duration']
+        for item in lst_float:
+            if item in status.keys():
+                status[item] = float(status[item])
         return status
 
     async def playlist(self):
@@ -295,7 +237,6 @@ class MPDController(object):
         :param filter: The string that should be searched against, the searches are done with partial matching
         :param unknown: I want to play this now by: replacing the playlist, adding it right after
         """
-        #TODO: Add option for replacing playlist (and play)
         lst_songs = []
         if(not type_asset in ['artist', 'album', 'file']):
             return [{'error': 'incorrect search type'}]
@@ -310,7 +251,10 @@ class MPDController(object):
 
         return lst_songs
 
-    async def playlist_add_file(self, file: str, position: int, start_playing: bool):
+    async def playlist_add_file(self, file: str, position: int, start_playing: bool, clear: bool=False):
+        if clear:
+            position = 0
+            await self.mpd_client.clear()
         await self.mpd_client.addid(file, position)
         if start_playing:
             await self.mpd_client.play(position)

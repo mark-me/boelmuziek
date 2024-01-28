@@ -1,6 +1,7 @@
 {
     "at_position": 1,
     "start_playing": true,
+    "clear_playlist": false,
     "files": [
     {
         "file": "Compilations/Rogue's Gallery_ Pirate Ballads, Sea Songs, & Chanteys/04 Fire Down Below.mp3"
