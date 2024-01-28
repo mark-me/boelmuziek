@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION_ID='v0.0.2'
+VERSION_ID='v0.0.3'
 COMPONENT=controller
 PUSH_IMAGES=false  # Default value for pushing images
 
