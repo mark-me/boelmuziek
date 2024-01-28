@@ -234,6 +234,20 @@ class MPDController(object):
             binary = None
         return binary
 
+    def determine_image_format(self, image_data: bytes) -> str:
+        """Function to determine image format (PNG or JPG) based on magic bytes"""
+        if image_data.startswith(b'\x89PNG\r\n\x1a\n'):
+            return "image/png"
+        elif image_data.startswith(b'\xff\xd8'):
+            return "image/jpeg"
+        else:
+            raise ValueError("Unsupported image format")
+
+    async def get_cover_art(self, uri):
+        image_bytes: bytes = await self.get_cover_binary(uri=uri)
+        image_format = self.determine_image_format(image_bytes)
+        return {'image_format': image_format, 'image': image_bytes}
+
     async def get_status(self):
         status = await self.mpd_client.status()
         lst_int = ['volume', 'playlist', 'playlistlength', 'mixrampdb',
