@@ -23,8 +23,8 @@ import logging
 
 import os
 import time
-import imghdr
-import pandas as pd
+from datetime import datetime
+from dateutil import parser
 from mpd.asyncio import MPDClient
 from collections import deque
 from collections import defaultdict
@@ -71,122 +71,6 @@ def retry(func, ex_type=Exception, limit=0, wait_ms=100, wait_increase_ratio=2, 
             wait_ms *= wait_increase_ratio
 
 
-class MPDNowPlaying(object):
-    """ Song information
-    """
-    def __init__(self, mpd_client):
-        self.__mpd_client = mpd_client
-        self.playing_type = ''
-        self.__now_playing = None
-        self.title = ""  # Current playing song name
-        self.artist = ""  # Current playing artist
-        self.album = ""  # Album the currently playing song is on
-        self.file = ""  # File with path relative to MPD music directory
-        self.__time_current_sec = 0  # Current playing song time (seconds)
-        self.time_current = ""  # Current playing song time (string format)
-        self.__time_total_sec = 0  # Current playing song duration (seconds)
-        self.time_total = ""  # Current playing song duration (string format)
-        self.time_percentage = 0  # Current playing song time as a percentage of the song duration
-        self.music_directory = ""
-
-    def now_playing_set(self, now_playing=None):
-        if now_playing is not None:
-            try:
-                self.file = now_playing['file']
-            except KeyError:
-                logging.error("Could not read filename of nowplaying")
-                return False
-            if self.file[:7] == "http://":
-                self.playing_type = 'radio'
-            else:
-                self.playing_type = 'file'
-
-            if 'title' in now_playing:
-                self.title = now_playing['title']  # Song title of current song
-            else:
-                self.title = os.path.splitext(os.path.basename(now_playing['file']))[0]
-            if self.playing_type == 'file':
-                if 'artist' in now_playing:
-                    self.artist = now_playing['artist']  # Artist of current song
-                else:
-                    self.artist = "Unknown"
-                if 'album' in now_playing:
-                    self.album = now_playing['album']  # Album the current song is on
-                else:
-                    self.album = "Unknown"
-                current_total = self.str_to_float(now_playing['time'])
-                self.__time_total_sec = current_total
-                self.time_total = self.make_time_string(current_total)  # Total time current
-            elif self.playing_type == 'radio':
-                if 'name' in now_playing:
-                    self.album = now_playing['name']  # The radio station name
-                else:
-                    self.album = "Unknown"
-                self.artist = ""
-        elif now_playing is None:  # Changed to no current song
-            self.__now_playing = None
-            self.title = ""
-            self.artist = ""
-            self.album = ""
-            self.file = ""
-            self.time_percentage = 0
-            self.__time_total_sec = 0
-            self.time_total = self.make_time_string(0)  # Total time current
-        return True
-
-    async def get_cover_binary(self, uri):
-        try:
-            logging.info("Start first try to get cover art from %s", uri)
-            cover = await self.__mpd_client.albumart(uri)
-            binary = cover['binary']
-            logging.info("End first try to get cover art")
-        except:
-            logging.warning("Could not retrieve album cover of %s", uri)
-            binary = None
-        return binary
-
-
-    async def get_cover_art(self):
-        blob_cover = await self.get_cover_binary(self.file)
-        if blob_cover is None:
-            file_cover_art = "default_cover_art.png"
-        else:
-            with open('covert_art.img', 'wb') as img:
-                img.write(blob_cover)  # write artwork to new image
-            file_cover_art = "covert_art.img"
-        return file_cover_art
-
-    def current_time_set(self, seconds):
-        if self.__time_current_sec != seconds:  # Playing time current
-            self.__time_current_sec = seconds
-            self.time_current = self.make_time_string(seconds)
-            if self.playing_type != 'radio':
-                self.time_percentage = int(self.__time_current_sec / self.__time_total_sec * 100)
-            else:
-                self.time_percentage = 0
-            return True
-        else:
-            return False
-
-    def make_time_string(self, seconds):
-        minutes = int(seconds / 60)
-        seconds_left = int(round(seconds - (minutes * 60), 0))
-        time_string = str(minutes) + ':'
-        seconds_string = ''
-        if seconds_left < 10:
-            seconds_string = '0' + str(seconds_left)
-        else:
-            seconds_string = str(seconds_left)
-        time_string += seconds_string
-        return time_string
-
-    def str_to_float(self, s):
-        try:
-            return float(s)
-        except ValueError:
-            return float(0)
-
-
 class MPDController(object):
     """ Controls playback and volume
     """
@@ -195,24 +79,6 @@ class MPDController(object):
         self.mpd_client = MPDClient()
         self.host = host
         self.port = port
-        self.update_interval = 1000  # Interval between mpc status update calls (milliseconds)
-        self.volume = 0  # Playback volume
-        self.now_playing = MPDNowPlaying(self.mpd_client)  # Dictionary containing currently playing song info
-        self.events = deque([])  # Queue of mpd events
-
-        self.__now_playing_changed = True
-        self.__player_control = ''  # Indicates whether mpd is playing, pausing or has stopped playing music
-        self.__muted = False  # Indicates whether muted
-        self.__last_update_time = 0  # For checking last update time (milliseconds)
-        self.__status = None  # mpc's current status output
-
-         # Database search results
-        self.searching_artist = ""  # Search path user goes through
-        self.searching_album = ""
-        self.list_albums = []
-        self.list_artists = []
-        self.list_songs = []
-        self.list_query_results = []
 
     async def connect(self):
         """ Connects to mpd server.
@@ -224,7 +90,6 @@ class MPDController(object):
             logging.error("Failed to connect to MPD server: host: ", self.host, " port: ", self.port)
             return False
         current_song = await self.mpd_client.currentsong()
-        self.now_playing.now_playing_set(current_song)
         return True
 
     @property
@@ -237,43 +102,6 @@ class MPDController(object):
         self.mpd_client.close()
         self.mpd_client.disconnect()
 
-    async def __parse_mpc_status(self):
-        """ Parses the mpd status and fills mpd event queue
-
-            :return: Boolean indicating if the status was changed
-        """
-        logging.info("Trying to get mpd status")
-        self.mpd_client.ping() # Wake up MPD
-        # Song information
-        now_playing_new = await self.mpd_client.currentsong()
-        if self.now_playing != now_playing_new and len(now_playing_new) > 0:  # Changed to a new song
-            self.__now_playing_changed = True
-            if self.now_playing is None or self.now_playing.file != now_playing_new['file']:
-                self.events.append('playing_file')
-            self.__radio_mode = self.now_playing.playing_type == 'radio'
-            if self.now_playing.album == '' or self.now_playing.album != now_playing_new['album']:
-                logging.info("Album change event added")
-                self.events.append('album_change')
-            self.now_playing.now_playing_set(now_playing_new)
-        # Player status
-        status = await self.mpd_client.status()
-        if self.__status == status:
-            return False
-        self.__status = status
-        if self.__player_control != status['state']:
-            self.__player_control = status['state']
-            self.events.append('player_control')
-        if self.__player_control != 'stop':
-            if self.now_playing.current_time_set(self.str_to_float(status['elapsed'])):
-                self.events.append('time_elapsed')
-        return True
-
-    def str_to_float(self, s):
-        try:
-            return float(s)
-        except ValueError:
-            return float(0)
-
     async def status_get(self):
         """ Updates mpc data, returns True when status data is updated. Wait at
             least 'update_interval' milliseconds before updating mpc status data.
@@ -285,13 +113,6 @@ class MPDController(object):
             return False
         self.__last_update_time = round(time.time()*1000)  # Reset update
         return await self.__parse_mpc_status()  # Parse mpc status output
-
-    def current_song_changed(self):
-        if self.__now_playing_changed:
-            self.__now_playing_changed = False
-            return True
-        else:
-            return False
 
     def player_control_set(self, play_status):
         """ Controls playback
@@ -415,6 +236,15 @@ class MPDController(object):
 
     async def get_status(self):
         status = await self.mpd_client.status()
+        lst_int = ['volume', 'playlist', 'playlistlength', 'mixrampdb',
+                   'song', 'songid', 'nextsong', 'nextsongid']
+        for item in lst_int:
+            if item in status.keys():
+                status[item] = int(status[item])
+        lst_bool = ['repeat', 'random', 'single', 'consume']
+        for item in lst_bool:
+            if item in status.keys():
+                status[item] = bool(int(status[item]))
         return status
 
     async def playlist(self):
@@ -432,7 +262,7 @@ class MPDController(object):
             song[0]['playlist_pos'] = playlist_pos
             lst_songs = lst_songs + song
             playlist_pos = playlist_pos + 1
-        lst_songs = self.rename_song_dict_keys(lst_songs)
+        lst_songs = self.__rename_song_dict_keys(lst_songs)
         return lst_songs
 
     async def current_song(self):
@@ -441,7 +271,7 @@ class MPDController(object):
         :return: A dictionary, with the song information and the information about it's position in the playlist
         """
         playing = await self.mpd_client.currentsong()
-        playing = self.rename_song_dict_keys(playing)
+        playing = self.__rename_song_dict_keys(playing)
         return playing
 
     async def playlist_add(self, type_asset: str, name: str, play: bool=False, replace=False):
@@ -465,6 +295,10 @@ class MPDController(object):
             song_added = await self.mpd_client.findadd('file', song['file'])
 
         return lst_songs
+
+    async def playlist_clear(self):
+        """Clears the current playlist"""
+        self.mpd_client.clear()
 
     async def get_artists(self):
         """ All artists in the database
@@ -497,7 +331,8 @@ class MPDController(object):
     async def get_artist_albums(self, name_artist:str) -> list:
         lst_query_results = []
         lst_query_results = await self.mpd_client.find('artist', name_artist)
-        lst_query_results = self.rename_song_dict_keys(lst_query_results)
+        lst_query_results = self.__type_library(lst_query_results)
+        lst_query_results = self.__rename_song_dict_keys(lst_query_results)
         lst_query_results = self.__nest_album(lst_query_results)
         return lst_query_results
 
@@ -514,7 +349,7 @@ class MPDController(object):
             type = 'title'
 
         list_query_results = await self.mpd_client.search(type, filter)
-        list_query_results = self.rename_song_dict_keys(list_query_results)
+        list_query_results = self.__rename_song_dict_keys(list_query_results)
         if(len(list_query_results) == 0):
             return({'error': type + ' ' + filter + ' not found.'})
 
@@ -527,7 +362,7 @@ class MPDController(object):
 
         return self.list_query_results
 
-    def rename_song_dict_keys(self, data):
+    def __rename_song_dict_keys(self, data):
         """
         Rename the song key within a list of dictionaries or a single dictionary.
 
@@ -551,6 +386,41 @@ class MPDController(object):
         else:
             # Handle other types or raise an exception if needed
             raise ValueError("Input data must be a list of dictionaries or a single dictionary.")
+
+    def __type_library(self, data):
+        if isinstance(data, list):
+            # If data is a list of dictionaries
+            i = 0
+            while i < len(data):
+                data[i] = self.__type_library_dict(data[i])
+                i += 1
+            return data
+        elif isinstance(data, dict):
+            # If data is a single dictionary
+            return self.__type_library_dict(data)
+        else:
+            # Handle other types or raise an exception if needed
+            raise ValueError("Input data must be a list of dictionaries or a single dictionary.")
+
+    def __type_library_dict(self, data):
+        lst_key_int = ['track', 'disc', 'time']
+        lst_key_datetime = ['last-modified']
+        #lst_date = ['date'] #, 'originaldate']
+        lst_float = ['duration']
+
+        for key in lst_key_int:
+            if key in data.keys():
+                data[key] = int(data[key])
+        for key in lst_key_datetime:
+            if key in data.keys():
+                data[key] =  parser.parse(data[key])
+        # for key in lst_date:
+        #     if key in data.keys():
+        #         data[key] = datetime.strptime(data[key], '%Y-%m-%d').date()
+        for key in lst_float:
+            if key in data.keys():
+                data[key] = float(data[key])
+        return data
 
     def __nest_artist_album(self, list_dict_files):
         """

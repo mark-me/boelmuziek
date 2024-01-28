@@ -3,8 +3,9 @@ from io import BytesIO
 import asyncio
 from mpd_client import *
 from snapcast_client import *
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.responses import HTMLResponse, Response, StreamingResponse
+from pydantic import BaseModel
 import uvicorn
 
 class TagTypeSearch(str, Enum):
@@ -23,6 +24,12 @@ class PlaylistControlType(str, Enum):
     stop = 'stop',
     next = 'next'
     previous = 'previous'
+
+class PlaylistItem(BaseModel):
+    file: str
+    position: int
+    start_playing: bool
+
 
 mpd = MPDController(host='localhost') #host='mpd') #
 snapserver = SnapServer(host='localhost')
@@ -84,7 +91,7 @@ async def get_albums(artist_name: str | None = None):
     return lst_results
 
 @app.get("/library/search/{type}")
-async def search_music(type: TagTypeSearch, part_string: str):
+async def search_music(type: TagTypeSearch, part_string: str = ...):
     await mpd_connect()
     lst_results = []
     lst_results = await mpd.search(type=type.value,
@@ -134,6 +141,16 @@ async def execute_player_control(action: PlaylistControlType):
     task_control = asyncio.create_task(mpd.player_control_get())
     control_status = await task_control
     return control_status
+
+@app.get("/playlist/clear/")
+async def clear_playlist():
+    await mpd_connect()
+    await mpd.playlist_clear()
+    status = await mpd.get_status()
+    if status['playlistlength'] == 0:
+        return {'status': 'OK', 'message': 'Cleared playlist'}
+    else:
+        return{'status': 'Error', 'message': 'Couldn\'t clear playlist'}
 
 @app.get("/status/")
 async def status():
