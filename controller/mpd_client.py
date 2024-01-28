@@ -21,7 +21,7 @@
 """
 import logging
 
-import time
+from datetime import datetime, timedelta
 from dateutil import parser
 from mpd.asyncio import MPDClient
 
@@ -202,6 +202,20 @@ class MPDController(object):
             if item in status.keys():
                 status[item] = float(status[item])
         return status
+
+    async def get_statistics(self):
+        dict_stats = await self.mpd_client.stats()
+        lst_int = ['artists', 'albums', 'songs']
+        for item in lst_int:
+            if item in dict_stats.keys():
+                dict_stats[item] = int(dict_stats[item])
+        lst_time_elapsed = ['db_playtime', 'uptime', 'playtime']
+        for item in lst_time_elapsed:
+            if item in dict_stats.keys():
+                dict_stats[item] = str(timedelta(seconds=int(dict_stats[item])))
+        if 'db_update' in dict_stats.keys():
+            dict_stats['db_update'] = datetime.fromtimestamp(int(dict_stats['db_update']))
+        return(dict_stats)
 
     async def playlist(self):
         """ Current playlist

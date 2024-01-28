@@ -28,8 +28,20 @@ async def list_outputs():
     outputs = await mpd.outputs_get()
     return outputs
 
+@router.get('/statistics/')
+async def server_statistics():
+    await mpd_connect()
+    server_stats = await mpd.get_statistics()
+    return server_stats
+
 @router.get("/output/toggle")
 async def toggle_output(id_output: int):
     await mpd_connect()
     outputs = await mpd.output_toggle(id_output)
     return outputs
+
+@router.get("/update-db/")
+async def update_mpd_library():
+    await mpd_connect()
+    update = await mpd.mpd_client.update()
+    return {'message': "Update #" + update}
