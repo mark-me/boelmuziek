@@ -5,6 +5,7 @@ from mpd_client import *
 from snapcast_client import *
 from fastapi import FastAPI, Query, Request
 from fastapi.responses import HTMLResponse, Response, StreamingResponse
+from typing import List
 from pydantic import BaseModel
 import uvicorn
 
@@ -27,9 +28,13 @@ class PlaylistControlType(str, Enum):
 
 class PlaylistItem(BaseModel):
     file: str
-    position: int
-    start_playing: bool
 
+class PlaylistItems(BaseModel):
+    at_position: int
+    start_playing: bool
+    files: List[PlaylistItem]
+
+class PlaylistMove(BaseModel)
 
 mpd = MPDController(host='localhost') #host='mpd') #
 snapserver = SnapServer(host='localhost')
@@ -112,12 +117,24 @@ async def get_current_playlist():
     current_song = await mpd.playlist()
     return current_song
 
-@app.get("/playlist/add/{type}")
-async def add_to_playlist(type: TagTypeControl, name: str):
+# @app.get("/playlist/add/{type}")
+# async def add_to_playlist(type: TagTypeControl, name: str):
+#     await mpd_connect()
+#     added_songs = await mpd.playlist_add(type_asset=type.value,
+#                                          name=name)
+#     return added_songs
+
+@app.post("/playlist/add/")
+async def add_to_playlist(items: PlaylistItems):
     await mpd_connect()
-    added_songs = await mpd.playlist_add(type_asset=type.value,
-                                         name=name)
-    return added_songs
+    position = items.at_position
+    first_round = True
+    for item in items.files:
+        first_round = items.start_playing and first_round
+        lst_playlist = await mpd.playlist_add_file(item.file, position=position, start_playing=first_round)
+        position = position + 1
+        first_round = False
+    return lst_playlist
 
 @app.get("/playlist/current-song/")
 async def get_current_song():

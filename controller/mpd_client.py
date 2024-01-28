@@ -296,6 +296,13 @@ class MPDController(object):
 
         return lst_songs
 
+    async def playlist_add_file(self, file: str, position: int, start_playing: bool):
+        await self.mpd_client.addid(file, position)
+        if start_playing:
+            await self.mpd_client.play(position)
+        playlist = await self.playlist()
+        return playlist
+
     async def playlist_clear(self):
         """Clears the current playlist"""
         self.mpd_client.clear()
@@ -472,7 +479,7 @@ class MPDController(object):
         # Iterate over each dictionary in the list
         for file_data in list_dict_files:
             album = file_data.get('album', '')  # Get 'album' with a default value of an empty string
-            file_dict = {key: value for key, value in file_data.items() if key not in ['file']}
+            file_dict = {key: value for key, value in file_data.items() }#if key not in ['file']}
 
             # Check if the album is already in the result_dict
             if album in result_dict:
