@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-
+from pydantic import BaseModel
 from io import BytesIO
 
 from discogs import Discogs
@@ -12,6 +12,9 @@ router = APIRouter(
     tags=['Discogs resources']
 )
 
+class Verification(BaseModel):
+    code: str
+
 @router.get("/has-credentials/")
 async def check_user_credentials():
     result = discogs.has_user_tokens()
@@ -22,9 +25,9 @@ async def open_discogs_permissions_page():
     result = discogs.request_user_access()
     return result
 
-@router.get("/supply-verification-code/")
-async def validate_verification_code(verification_code: str):
-    result = discogs.validate_verification_code(verification_code)
+@router.post("/supply-verification-code/")
+async def validate_verification_code(verification: Verification):
+    result = discogs.validate_verification_code(verification.code)
     return result
 
 @router.get("/artists-image/")
