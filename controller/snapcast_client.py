@@ -32,7 +32,8 @@ class SnapServer():
         for client in clients:
             if(client.identifier == id):
                 mute = not client.muted
-                client.set_muted(mute)
+                mute = await client.set_muted(mute)
+
                 return [{
                     'friendly_name': client.friendly_name,
                     'identifier': client.identifier,
@@ -40,7 +41,26 @@ class SnapServer():
                          }]
 
     async def list_groups(self):
-        return self.server.groups
+        lst_groups = []
+        groups = self.server.groups
+        for group in groups:
+            dict_group = {
+                'friendly_name': group.friendly_name,
+                'identifier': group.identifier,
+                'muted': group.muted,
+                'volume': group.volume,
+                'stream_status': group.stream_status,
+                'name': group.name
+                }
+            lst_clients = []
+            for client in group.clients:
+                lst_clients.append({'identifier': client})
+            dict_group['clients'] = lst_clients
+            lst_groups.append(dict_group)
+        return lst_groups
+
+    async def group_mute(self, id_group: str) -> bool:
+        await self.server.group_mute(identifier=id_group, status='false')
 
 
 async def main(loop):
