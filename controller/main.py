@@ -5,7 +5,7 @@ import uvicorn
 from mpd_client import *
 from routers import mpd_system, mpd_playlist, mpd_library, snapserver, discogs
 
-mpd = MPDController(host='localhost') #host='mpd') #
+mpd = MPDController(host='mpd') #host='localhost') #
 
 #asyncio.run(mpd.connect())
 app = FastAPI()
