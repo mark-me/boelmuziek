@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from io import BytesIO
@@ -37,4 +37,5 @@ async def get_artists_image(name_artist: str):
         headers = {"Content-Type": 'image/jpeg'}
         return StreamingResponse(BytesIO(result['message']), headers=headers)
     else:
+        raise HTTPException(status_code=404, detail=f"Artist not found: {name_artist}")
         return result
