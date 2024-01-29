@@ -38,33 +38,28 @@ class MPDController(object):
         self.host = host
         self.port = port
 
-    async def connect(self):
+    async def connect(self) -> bool:
         """ Connects to mpd server.
             :return: Boolean indicating if successfully connected to mpd server.
         """
-        try:
-            await self.mpd_client.connect(self.host, self.port)
-        except ConnectionError:
-            logging.error("Failed to connect to MPD server: host: ", self.host, " port: ", self.port)
-            return False
-        current_song = await self.mpd_client.currentsong()
+        if(not self.is_connected):
+            try:
+                await self.mpd_client.connect(self.host, self.port)
+            except ConnectionError:
+                logging.error("Failed to connect to MPD server: host: ", self.host, " port: ", self.port)
+                return False
         return True
 
     @property
     def is_connected(self) -> bool:
         return self.mpd_client.connected
 
-    def disconnect(self):
-        """ Closes the connection to the mpd server. """
-        logging.info("Closing down MPD connection")
-        self.mpd_client.close()
-        self.mpd_client.disconnect()
-
-    def player_control_set(self, play_status):
+    async def player_control_set(self, play_status):
         """ Controls playback
 
             :param play_status: Playback action ['play', 'pause', 'stop', 'next', 'previous']
         """
+        await self.connect()
         logging.info("MPD player control %s", play_status)
         try:
             if play_status == 'play':
@@ -81,89 +76,65 @@ class MPDController(object):
             logging.error("Could not send %s command to MPD", play_status)
 
     async def outputs_get(self) -> list:
+        await self.connect()
         outputs = await self.mpd_client.outputs()
         return outputs
 
     async def output_toggle(self, id_output: int):
+        await self.connect()
         test = await self.mpd_client.toggleoutput(id_output)
         outputs = await self.mpd_client.outputs()
         return outputs[id_output]
 
-    async def __search(self, tag_type):
-        """ Searches all entries of a certain type.
+    # async def __search(self, tag_type):
+    #     """ Searches all entries of a certain type.
 
-        :param tag_type: ["artist"s, "album"s, song"title"s]
-        :return: A list with search results.
-        """
-        self.list_query_results = self.mpd_client.list(tag_type)
-        self.list_query_results.sort()
-        return self.list_query_results
+    #     :param tag_type: ["artist"s, "album"s, song"title"s]
+    #     :return: A list with search results.
+    #     """
+    #     self.list_query_results = self.mpd_client.list(tag_type)
+    #     self.list_query_results.sort()
+    #     return self.list_query_results
 
-    async def __search_first_letter(self, tag_type, first_letter):
-        """ Searches all entries of a certain type matching a first letter
+    # async def __search_first_letter(self, tag_type, first_letter):
+    #     """ Searches all entries of a certain type matching a first letter
 
-        :param tag_type: ["artist"s, "album"s, song"title"s]
-        :param first_letter: The first letter
-        :return: A list with search results.
-        """
-        temp_results = []
-        for i in self.list_query_results:
-            if i[:1].upper() == first_letter.upper():
-                temp_results.append(i)
-        self.list_query_results = temp_results
-        return self.list_query_results
+    #     :param tag_type: ["artist"s, "album"s, song"title"s]
+    #     :param first_letter: The first letter
+    #     :return: A list with search results.
+    #     """
+    #     temp_results = []
+    #     for i in self.list_query_results:
+    #         if i[:1].upper() == first_letter.upper():
+    #             temp_results.append(i)
+    #     self.list_query_results = temp_results
+    #     return self.list_query_results
 
-    async def __search_of_type(self, type_result, type_filter, name_filter):
-        """ Searching one type depending on another type (very clear description isn't it?)
+    # async def __search_of_type(self, type_result, type_filter, name_filter):
+    #     """ Searching one type depending on another type (very clear description isn't it?)
 
-        :param type_result: The type of result-set generated ["artist"s, "album"s, song"title"s]
-        :param type_filter: The type of filter used ["artist"s, "album"s, song"title"s]
-        :param name_filter: The name used to filter
-        :return:
-        """
-        if self.searching_artist == "" and self.searching_album == "":
-            self.list_query_results = self.mpd_client.list(type_result, type_filter, name_filter)
-        elif self.searching_artist != "" and self.searching_album == "":
-            self.list_query_results = self.mpd_client.list(type_result, 'artist', self.searching_artist,
-                                                           type_filter,
-                                                           name_filter)
-        elif self.searching_artist == "" and self.searching_album != "":
-            self.list_query_results = self.mpd_client.list(type_result, 'album', self.searching_album, type_filter,
-                                                           name_filter)
-        elif self.searching_artist != "" and self.searching_album != "":
-            self.list_query_results = self.mpd_client.list(type_result, 'artist', self.searching_artist, 'album',
-                                                           self.searching_album, type_filter, name_filter)
-        self.list_query_results.sort()
-        return self.list_query_results
-
-    def artist_albums_get(self, artist_name):
-        """ Retrieves artist's albums.
-
-        :param artist_name: The name of the artist to retrieve the albums of.
-        :return: A list of album titles.
-        """
-        self.searching_artist = artist_name
-        return self.__search_of_type('album', 'artist', artist_name)
-
-    def artist_songs_get(self, artist_name):
-        """ Retrieves artist's songs.
-
-        :param artist_name: The name of the artist to retrieve the songs of.
-        :return: A list of song titles
-        """
-        self.searching_artist = artist_name
-        return self.__search_of_type('title', 'artist', artist_name)
-
-    def album_songs_get(self, album_name):
-        """ Retrieves all song titles of an album.
-
-        :param album_name: The name of the album
-        :return: A list of song titles
-        """
-        self.searching_album = album_name
-        return self.__search_of_type('title', 'album', album_name)
+    #     :param type_result: The type of result-set generated ["artist"s, "album"s, song"title"s]
+    #     :param type_filter: The type of filter used ["artist"s, "album"s, song"title"s]
+    #     :param name_filter: The name used to filter
+    #     :return:
+    #     """
+    #     if self.searching_artist == "" and self.searching_album == "":
+    #         self.list_query_results = self.mpd_client.list(type_result, type_filter, name_filter)
+    #     elif self.searching_artist != "" and self.searching_album == "":
+    #         self.list_query_results = self.mpd_client.list(type_result, 'artist', self.searching_artist,
+    #                                                        type_filter,
+    #                                                        name_filter)
+    #     elif self.searching_artist == "" and self.searching_album != "":
+    #         self.list_query_results = self.mpd_client.list(type_result, 'album', self.searching_album, type_filter,
+    #                                                        name_filter)
+    #     elif self.searching_artist != "" and self.searching_album != "":
+    #         self.list_query_results = self.mpd_client.list(type_result, 'artist', self.searching_artist, 'album',
+    #                                                        self.searching_album, type_filter, name_filter)
+    #     self.list_query_results.sort()
+    #     return self.list_query_results
 
     async def __get_cover_binary(self, uri):
+        await self.connect()
         try:
             cover = await self.mpd_client.albumart(uri)
             binary = cover['binary']
@@ -182,11 +153,13 @@ class MPDController(object):
             raise ValueError("Unsupported image format")
 
     async def get_cover_art(self, uri):
+        await self.connect()
         image_bytes: bytes = await self.__get_cover_binary(uri=uri)
         image_format = self.__determine_image_format(image_bytes)
         return {'image_format': image_format, 'image': image_bytes}
 
     async def get_status(self):
+        await self.connect()
         status = await self.mpd_client.status()
         lst_int = ['volume', 'playlist', 'playlistlength', 'mixrampdb',
                    'song', 'songid', 'nextsong', 'nextsongid']
@@ -204,6 +177,7 @@ class MPDController(object):
         return status
 
     async def get_statistics(self):
+        await self.connect()
         dict_stats = await self.mpd_client.stats()
         lst_int = ['artists', 'albums', 'songs']
         for item in lst_int:
@@ -222,6 +196,7 @@ class MPDController(object):
 
         :return: List of dictionaries, with the song information and the information about it's position in the playlist
         """
+        await self.connect()
         lst_songs = []
         playlist_pos = 1
         playlist = await self.mpd_client.playlist()
@@ -240,6 +215,7 @@ class MPDController(object):
 
         :return: A dictionary, with the song information and the information about it's position in the playlist
         """
+        await self.connect()
         playing = await self.mpd_client.currentsong()
         playing = self.__rename_song_dict_keys(playing)
         return playing
@@ -251,6 +227,7 @@ class MPDController(object):
         :param filter: The string that should be searched against, the searches are done with partial matching
         :param unknown: I want to play this now by: replacing the playlist, adding it right after
         """
+        await self.connect()
         lst_songs = []
         if(not type_asset in ['artist', 'album', 'file']):
             return [{'error': 'incorrect search type'}]
@@ -266,6 +243,18 @@ class MPDController(object):
         return lst_songs
 
     async def playlist_add_file(self, file: str, position: int, start_playing: bool, clear: bool=False):
+        """Adds a file to the playlist
+
+        Args:
+            file (str): A file to be added
+            position (int): The position at which the file is added to the playlist
+            start_playing (bool): Start playing the file immediately
+            clear (bool, optional): Clear the playlist before adding the file. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        await self.connect()
         if clear:
             position = 0
             await self.mpd_client.clear()
@@ -277,6 +266,7 @@ class MPDController(object):
 
     async def playlist_clear(self):
         """Clears the current playlist"""
+        await self.connect()
         self.mpd_client.clear()
 
     async def get_artists(self):
@@ -284,6 +274,7 @@ class MPDController(object):
 
         :return: A list of dictionaries for artists
         """
+        await self.connect()
         lst_query_results = await self.mpd_client.list('artist')
         return lst_query_results
 
@@ -292,6 +283,7 @@ class MPDController(object):
 
         :return: A list of dictionaries for albums with their artists
         """
+        await self.connect()
         lst_query_results = await self.mpd_client.list('album', 'group', 'albumartist')
         transformed_list = []
 
@@ -308,6 +300,15 @@ class MPDController(object):
         return transformed_list
 
     async def get_artist_albums(self, name_artist:str) -> list:
+        """A list of albums (and their songs) that belong to a specific artists (strict search)
+
+        Args:
+            name_artist (str): An exact name for an artist
+
+        Returns:
+            list: A list of dictionaries with albums and nested files for each album
+        """
+        await self.connect()
         lst_query_results = []
         lst_query_results = await self.mpd_client.find('artist', name_artist)
         lst_query_results = self.__type_library(lst_query_results)
@@ -327,11 +328,13 @@ class MPDController(object):
         if(type == 'song'): # To match MPD internal naming convention
             type = 'title'
 
+        await self.connect()
         list_query_results = await self.mpd_client.search(type, filter)
         list_query_results = self.__rename_song_dict_keys(list_query_results)
         if(len(list_query_results) == 0):
             return({'error': type + ' ' + filter + ' not found.'})
 
+        # Nest files if artists or albums are searched
         if(type == 'artist'):
             self.list_query_results = self.__nest_artist_album(list_query_results)
         elif(type == 'album'):
@@ -367,6 +370,14 @@ class MPDController(object):
             raise ValueError("Input data must be a list of dictionaries or a single dictionary.")
 
     def __type_library(self, data):
+        """Converts datatypes to their actual datatypes instead of the strings MPD returns
+
+        Args:
+            data (dict or list): A dictionary containing MPD library query results
+
+        Returns:
+            dict or list: A (list of) dictionary with converted data types
+        """
         if isinstance(data, list):
             # If data is a list of dictionaries
             i = 0
@@ -381,7 +392,15 @@ class MPDController(object):
             # Handle other types or raise an exception if needed
             raise ValueError("Input data must be a list of dictionaries or a single dictionary.")
 
-    def __type_library_dict(self, data):
+    def __type_library_dict(self, data) -> dict:
+        """Converts datatypes to their actual datatypes instead of the strings MPD returns
+
+        Args:
+            data (dict): A dictionary containing MPD library query results
+
+        Returns:
+            dict: A dictionary with converted data types
+        """
         lst_key_int = ['track', 'disc', 'time']
         lst_key_datetime = ['last-modified']
         #lst_date = ['date'] #, 'originaldate']

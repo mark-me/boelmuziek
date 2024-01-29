@@ -12,13 +12,6 @@ from mpd_client import *
 
 mpd = MPDController(host='localhost')
 
-async def mpd_connect() -> bool:
-    is_connected = mpd.is_connected
-    if(not is_connected):
-        task_connect = asyncio.create_task(mpd.connect())
-        is_connected = await task_connect
-    return is_connected
-
 router = APIRouter(
     prefix='/playlist',
     tags=['MPD playlist']
@@ -42,13 +35,11 @@ class PlaylistItems(BaseModel):
 
 @router.get("/")
 async def get_current_playlist():
-    await mpd_connect()
     current_playlist = await mpd.playlist()
     return current_playlist
 
 @router.post("/add/")
 async def add_to_playlist(items: PlaylistItems):
-    await mpd_connect()
     position = items.at_position
     first_round = True
     for item in items.files:
@@ -60,13 +51,11 @@ async def add_to_playlist(items: PlaylistItems):
 
 @router.get("/current-song/")
 async def get_current_song():
-    await mpd_connect()
     current_song = await mpd.current_song()
     return current_song
 
 @router.get("/current-cover/")
 async def get_current_song_cover():
-    await mpd_connect()
     current_song = await mpd.current_song()
     dict_image = await mpd.get_cover_art(current_song['file'])
     headers = {"Content-Type": dict_image['image_format']}
@@ -74,17 +63,20 @@ async def get_current_song_cover():
 
 @router.get("/control/")
 async def execute_player_control(action: PlaylistControlType):
-    await mpd_connect()
-    mpd.player_control_set(action.value)
+    await mpd.player_control_set(action.value)
     control_status = await mpd.get_status()
     return control_status['state']
 
 @router.get("/clear/")
 async def clear_playlist():
-    await mpd_connect()
+    """Clear the current playlist
+
+    Returns:
+        dict: Reports on status of the operation
+    """
     await mpd.playlist_clear()
     status = await mpd.get_status()
     if status['playlistlength'] == 0:
-        return {'status': 'OK', 'message': 'Cleared playlist'}
+        return {'status_code': '200', 'message': 'Cleared playlist'}
     else:
         return{'status': 'Error', 'message': 'Couldn\'t clear playlist'}
