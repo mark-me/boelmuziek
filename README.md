@@ -12,12 +12,13 @@ A music player that offers diverse navigation options through your music library
 This schematic looks a bit busy, so let me attempt to explain:
 
 * The **UI** is all the user will see. It allows the user to:
-  * search for music,,
+  * search for music,
   * playing music,
   * switch between streaming music your phone (for example) and the multi-room streamer and
   * control the volume on the client stream, the individual room clients of all room clients simultaneously.
 * The UI talks to the **Controller** to:
   * query the music collection,
+  * retrieve artist art (not part of MPD) via [Discogs](https://www.discogs.com/) (discogs account is required)
   * control playback,
   * switch between client and multi-room output and
   * control volume.
