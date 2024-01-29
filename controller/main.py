@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse
 import uvicorn
 
 from mpd_client import *
-from routers import mpd_system, mpd_playlist, mpd_library, snapserver
+from routers import mpd_system, mpd_playlist, mpd_library, snapserver, discogs
 
 mpd = MPDController(host='localhost') #host='mpd') #
 
@@ -13,6 +13,7 @@ app.include_router(mpd_system.router)
 app.include_router(mpd_playlist.router)
 app.include_router(mpd_library.router)
 app.include_router(snapserver.router)
+app.include_router(discogs.router)
 
 @app.get("/", response_class=HTMLResponse)
 async def welcome_page(request: Request):
