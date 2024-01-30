@@ -30,6 +30,11 @@ async def validate_verification_code(verification: Verification):
     result = discogs.validate_verification_code(verification.code)
     return result
 
+@router.get("/verify_user/")
+async def validate_verification_code(verification: Verification):
+    result = discogs.validate_verification_code(verification.code)
+    return result
+
 @router.get("/artists-image/")
 async def get_artists_image(name_artist: str):
     result = discogs.get_artist_image(name_artist)

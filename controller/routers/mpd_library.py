@@ -20,7 +20,7 @@ class TagTypeSearch(str, Enum):
     song = "song"
 
 @router.get("/artists/")
-async def get_artists():
+async def get_artists() -> list:
     lst_results = []
     lst_results = await mpd.get_artists()
     return lst_results

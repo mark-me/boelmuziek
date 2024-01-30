@@ -7,7 +7,6 @@ from routers import mpd_system, mpd_playlist, mpd_library, snapserver, discogs
 
 mpd = MPDController(host='mpd') #host='localhost') #
 
-#asyncio.run(mpd.connect())
 app = FastAPI()
 app.include_router(mpd_system.router)
 app.include_router(mpd_playlist.router)

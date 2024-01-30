@@ -35,18 +35,19 @@ class MPDController(object):
 
     def __init__(self, host, port = 6600):
         self.mpd_client = MPDClient()
-        self.host = host
-        self.port = port
+        self._host = host
+        self._port = port
 
     async def connect(self) -> bool:
         """ Connects to mpd server.
+
             :return: Boolean indicating if successfully connected to mpd server.
         """
         if(not self.is_connected):
             try:
-                await self.mpd_client.connect(self.host, self.port)
+                await self.mpd_client.connect(self._host, self._port)
             except ConnectionError:
-                logging.error("Failed to connect to MPD server: host: ", self.host, " port: ", self.port)
+                logging.error("Failed to connect to MPD server: host: ", self._host, " port: ", self._port)
                 return False
         return True
 
@@ -76,6 +77,11 @@ class MPDController(object):
             logging.error("Could not send %s command to MPD", play_status)
 
     async def outputs_get(self) -> list:
+        """MPD music stream outputs
+
+        Returns:
+            list: A list of dictionaries with stream output info
+        """
         await self.connect()
         outputs = await self.mpd_client.outputs()
         return outputs
@@ -133,7 +139,15 @@ class MPDController(object):
     #     self.list_query_results.sort()
     #     return self.list_query_results
 
-    async def __get_cover_binary(self, uri):
+    async def __get_cover_binary(self, uri: str) -> bytes:
+        """Retrieving a file's coverart as a binary stream
+
+        Args:
+            uri (str): The file specifier from the MPD library
+
+        Returns:
+            bytes: A binary stream representing the file's cover image
+        """
         await self.connect()
         try:
             cover = await self.mpd_client.albumart(uri)
@@ -144,7 +158,17 @@ class MPDController(object):
         return binary
 
     def __determine_image_format(self, image_data: bytes) -> str:
-        """Function to determine image format (PNG or JPG) based on magic bytes"""
+        """Function to determine image format (PNG or JPG) based on magic bytes
+
+        Args:
+            image_data (bytes): A byte stream that represents an image
+
+        Raises:
+            ValueError: When encountering a different format than either PNG or JPG
+
+        Returns:
+            str: A MIME type string
+        """
         if image_data.startswith(b'\x89PNG\r\n\x1a\n'):
             return "image/png"
         elif image_data.startswith(b'\xff\xd8'):
@@ -152,13 +176,26 @@ class MPDController(object):
         else:
             raise ValueError("Unsupported image format")
 
-    async def get_cover_art(self, uri):
+    async def get_cover_art(self, uri: str) -> dict:
+        """Retrieve covert art of a file
+
+        Args:
+            uri (str): The file specifier from the MPD library
+
+        Returns:
+            dict: The MIME type of the art and the image in the form of a byte stream
+        """
         await self.connect()
         image_bytes: bytes = await self.__get_cover_binary(uri=uri)
         image_format = self.__determine_image_format(image_bytes)
         return {'image_format': image_format, 'image': image_bytes}
 
-    async def get_status(self):
+    async def get_status(self) -> dict:
+        """MPD server status
+
+        Returns:
+            dict: MPD server status
+        """
         await self.connect()
         status = await self.mpd_client.status()
         lst_int = ['volume', 'playlist', 'playlistlength', 'mixrampdb',
@@ -176,7 +213,12 @@ class MPDController(object):
                 status[item] = float(status[item])
         return status
 
-    async def get_statistics(self):
+    async def get_statistics(self) -> dict:
+        """MPD server statistics
+
+        Returns:
+            dict: MPD server statistics
+        """
         await self.connect()
         dict_stats = await self.mpd_client.stats()
         lst_int = ['artists', 'albums', 'songs']
