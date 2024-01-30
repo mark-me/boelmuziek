@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 import uvicorn
@@ -5,7 +7,9 @@ import uvicorn
 from mpd_client import *
 from routers import mpd_system, mpd_playlist, mpd_library, snapserver, discogs
 
-mpd = MPDController(host='mpd') #host='localhost') #
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+mpd = MPDController(host='localhost') #host='mpd') #
 
 app = FastAPI()
 app.include_router(mpd_system.router)
@@ -19,7 +23,7 @@ async def welcome_page(request: Request):
     content = """
     <html>
         <head>
-            <title>The controller welcomes you</title>
+            <title>The controller welcomes you...</title>
         </head>
         <body>
             <h1>The API that dominates MPD </h1>

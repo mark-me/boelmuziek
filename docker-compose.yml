@@ -38,6 +38,8 @@ services:
       - 5000:5000
     networks:
       - music_stack
+    volumes:
+      - ${DIR_CONTROLLER_CONFIG}:/app/config
   icecast:
     image: ghcr.io/mark-me/boelmuziek-icecast:${TAG_ICECAST}
     container_name: icecast

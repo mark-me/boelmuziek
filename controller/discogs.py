@@ -1,5 +1,6 @@
 import os
 import yaml
+from pathlib import Path
 
 import discogs_client
 from discogs_client.exceptions import HTTPError
@@ -8,13 +9,12 @@ class Discogs:
     def __init__(self) -> None:
         self._consumer_key = 'zvHFpFQWJrdDfCwoLalG'
         self._consumer_secret = 'FzRxDEGBbvWZpAmkQKBYHYeNdIjKxnVO'
-        self._file_secrets = 'secrets.yml'
+        Path("config").mkdir(exist_ok=True)
+        self._file_secrets = 'config/secrets.yml'
         self._user_token: str = None
         self._user_secret: str = None
         self._user: str = None
         self._user_name: str=None
-        # A user-agent is required with Discogs API requests. Be sure to make your
-        # user-agent unique, or you may get a bad response.
         self.user_agent = 'boelmuziek'
         self.discogsclient = discogs_client.Client(self.user_agent,
                                                     consumer_key=self._consumer_key,
