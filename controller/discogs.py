@@ -1,7 +1,6 @@
 import os
 import yaml
 
-from fastapi import HTTPException
 import discogs_client
 from discogs_client.exceptions import HTTPError
 
@@ -26,29 +25,34 @@ class Discogs:
     def has_user_tokens(self) -> dict:
         """ Checks if user secrets are already present"""
         if not os.path.isfile(self.file_secrets):
-            return {'status': 500,
-                    'message': 'File does not exist'}
+            return {'status_code': 500,
+                    'detail': 'There is no config file for secrets'}
 
         # Load the YAML file
         with open(self.file_secrets, 'r') as file:
             try:
                 yaml_data = yaml.safe_load(file)
             except yaml.YAMLError as e:
-                raise HTTPException(status_code=500,
-                                    detail=f"Error loading YAML file: {str(e)}")
+                return {'status_code': 500,
+                        'detail': f"Error loading YAML file: {str(e)}"}
         if not isinstance(yaml_data, dict):
-            raise HTTPException(status_code=500,
-                                detail='YAML file does not contain a dictionary')
+            return {'status_code': 500,
+                    'detail': 'YAML file does not contain a dictionary'}
         # Check if 'token' and 'secret' keys are present
         expected_keys = {'token', 'secret'}
         missing_keys = expected_keys - set(yaml_data.keys())
         if missing_keys:
-            raise HTTPException(status_code=500,
-                                detail=f"Missing keys in YAML file: {', '.join(missing_keys)}")
+            return{'status_code': 500,
+                   'detail': f"Missing keys in YAML file: {', '.join(missing_keys)}"}
         return {'status_code':200,
                 'detail':'YAML file is valid'}
 
     def load_user_secrets(self) -> dict:
+        """Load user secrets from file and reports on success
+
+        Returns:
+            dict: Report of sucess
+        """
         with open(self.file_secrets, 'r') as file:
             try:
                 data = yaml.safe_load(file)
@@ -57,14 +61,14 @@ class Discogs:
                 self.user = data['user']
                 self.user_name = data['name']
             except yaml.YAMLError as e:
-                raise HTTPException(status_code=500,
-                                    detail=f"Error loading YAML file: {str(e)}")
+                return {'status_code': 500,
+                        'detail': f"Error loading YAML file: {str(e)}"}
         self.discogsclient.set_token(token=self.user_token, secret=self.user_secret)
         try:
             self.discogsclient.identity()
         except HTTPError:
-                raise HTTPException(status_code=401,
-                                    detail="Unable to authenticate.")
+            return {'status_code': 401,
+                    'detail': 'Unable to authenticate.'}
         return {'status_code': 200,
                 'detail': 'Loaded user credentials'}
 
@@ -82,8 +86,8 @@ class Discogs:
         try:
             self.user_token, self.user_secret = self.discogsclient.get_access_token(oauth_verifier)
         except HTTPError:
-            raise HTTPException(status_code=401,
-                                detail="Unable to authenticate.")
+            return{'status_code': 401,
+                   'detail': 'Unable to authenticate.'}
         user = self.discogsclient.identity() # Fetch the identity object for the current logged in user.
         # Write to secrets file
         dict_user = {
@@ -100,35 +104,15 @@ class Discogs:
     def get_artist_image(self, name_artist: str):
         search_results = self.discogsclient.search(name_artist, type='artist')
         if search_results == None:
-            raise HTTPException(status_code=404,
-                                detail=f"Artist not found: {name_artist}")
+            return{'status_code': 404,
+                   'detail': f"Artist not found: {name_artist}"}
         else:
             try:
                 image = search_results[0].images[0]['uri']
                 content, resp = self.discogsclient._fetcher.fetch(None, 'GET', image,
-                                                headers={'User-agent': self.user_agent})
+                                                                  headers={'User-agent': self.user_agent})
             except TypeError:
-                raise HTTPException(status_code=404,
-                                    detail=f"No artist image found : {name_artist}")
+                return {'status_code': 404,
+                        'detail': f"No artist image found : {name_artist}"}
             return {'status': resp,
                     'message': content}
-
-
-if __name__ == "__main__":
-    # Example flow for authentication
-    discogs = Discogs()
-    has_tokens = discogs.has_user_tokens()
-    if not has_tokens['status'] == 200:
-        dict_msg = discogs.request_user_access()
-        print(dict_msg['message'])
-        print(dict_msg['url'])
-        verification_code = input("Verification code: ")
-        discogs.validate_verification_code(verification_code=verification_code)
-    else:
-        discogs.load_user_secrets()
-
-    response = discogs.get_artist_image('Tom Waits')
-    print("test")
-    # if :
-    #     dict_secrets = discogs.load_user_secrets()
-    # else:
