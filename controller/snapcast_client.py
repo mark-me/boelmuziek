@@ -5,12 +5,16 @@ class SnapServer():
     def __init__(self, host) -> None:
         self.host = host
         self.loop = asyncio.get_event_loop() # Loop needed for snapserver
-        self.server = self.loop.run_until_complete(
-            snapcast.control.create_server(self.loop, host)
-            )
+        # self.server = self.loop.run_until_complete(
+        #     snapcast.control.create_server(self.loop, host)
+        #     )
+
+    async def connect(self):
+        self.server = await snapcast.control.create_server(self.loop, self.host)
 
     async def list_clients(self):
        # print all client names
+        await self.connect()
         lst_clients = []
         clients = self.server.clients
         for client in clients:
@@ -64,8 +68,7 @@ class SnapServer():
 
 
 async def main(loop):
-    snapserver = SnapServer(host='192.168.0.25')
-    await snapserver.connect()
+    snapserver = SnapServer(host='localhost')
     clients = await snapserver.list_clients()
     for client in clients:
         print(client)
