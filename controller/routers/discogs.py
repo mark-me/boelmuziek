@@ -22,17 +22,12 @@ async def check_user_credentials():
 
 @router.get("/get-user-access/")
 async def open_discogs_permissions_page():
-    result = discogs.request_user_access()
-    return result
-
-@router.post("/supply-verification-code/")
-async def validate_verification_code(verification: Verification):
-    result = discogs.validate_verification_code(verification.code)
+    result = discogs.request_user_access(callback_url="http://localhost:5080/discogs/verify_user/")
     return result
 
 @router.get("/verify_user/")
-async def validate_verification_code(verification: Verification):
-    result = discogs.validate_verification_code(verification.code)
+async def validate_verification_code(oauth_token: str, oauth_verifier: str):
+    result = discogs.validate_verification_code(oauth_verifier)
     return result
 
 @router.get("/artists-image/")
