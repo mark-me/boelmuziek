@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse
 import uvicorn
 
 from mpd_client import *
-from routers import mpd_system, mpd_playlist, mpd_library, snapserver, discogs
+from routers import mpd_system, mpd_playlist, mpd_library, snapserver, discogs, lastfm
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -16,6 +16,7 @@ app.include_router(mpd_system.router)
 app.include_router(mpd_playlist.router)
 app.include_router(mpd_library.router)
 app.include_router(snapserver.router)
+app.include_router(lastfm.router)
 app.include_router(discogs.router)
 
 @app.get("/", response_class=HTMLResponse)
