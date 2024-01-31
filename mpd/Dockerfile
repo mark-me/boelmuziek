@@ -4,11 +4,11 @@ ARG user=mpd
 ARG group=audio
 
 RUN apk -q update \
-    && apk -q --no-progress add mpd \
-    && apk -q --no-progress add mpc \
-    && apk -q --no-progress add mpdscribble \
-    && apk -q --no-progress add avahi avahi-tools \
-    && rm -rf /var/cache/apk/*
+    && apk --no-cache add mpd \
+    && apk --no-cache tzdata \
+    && apk --no-cache add mpc \
+    && apk --no-cache add mpdscribble \
+    && apk --no-cache add avahi avahi-tools
 
 RUN mkdir -p /var/lib/mpd/music \
     && mkdir -p /var/lib/mpd/playlists \

@@ -4,8 +4,8 @@ ARG user=icecast
 ARG group=icecast
 
 RUN apk -q update \
-    && apk -q --no-progress add icecast \
-    && rm -rf /var/cache/apk/*
+    && apk --no-cache add icecast \
+    && apk --no-cache add tzdata
 
 COPY silence.ogg /usr/share/icecast/silence.ogg
 COPY icecast.xml /usr/share/icecast/icecast.xml

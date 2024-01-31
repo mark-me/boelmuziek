@@ -46,6 +46,8 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Europe/Amsterdam
+    depends_on:
+      - mpd
     ports:
       - 8000:8000
     networks:
