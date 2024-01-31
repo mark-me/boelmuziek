@@ -12,9 +12,6 @@ router = APIRouter(
     tags=['Discogs resources']
 )
 
-class Verification(BaseModel):
-    code: str
-
 @router.get("/has-credentials/")
 async def check_user_credentials():
     result = discogs.has_user_tokens()
