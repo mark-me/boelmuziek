@@ -12,10 +12,12 @@ router = APIRouter(
     tags=['Discogs resources']
 )
 
-@router.get("/has-credentials/")
+@router.get("/check-credentials/")
 async def check_user_credentials():
-    result = discogs.has_user_tokens()
-    return result
+    if discogs.check_user_token():
+        return{'description': 'All OK!'}
+    else:
+        raise HTTPException(status_code=401, detail='Let user re-authorize access to Last.fm account')
 
 @router.get("/get-user-access/")
 async def open_discogs_permissions_page():

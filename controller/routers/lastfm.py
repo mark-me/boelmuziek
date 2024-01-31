@@ -17,7 +17,7 @@ async def check_user_credentials():
     if lastfm.check_user_token():
         return{'description': 'All OK!'}
     else:
-        raise HTTPException(status_code=401, description='Let user re-authorize access to Last.fm account')
+        raise HTTPException(status_code=401, detail='Let user re-authorize access to Last.fm account')
 
 @router.get("/get-user-access/")
 async def open_lastfm_permissions_page():
@@ -27,4 +27,9 @@ async def open_lastfm_permissions_page():
 @router.get("/receive-token/")
 async def accept_user_token(token: str):
     result = lastfm.save_user_token(token)
+    return result
+
+@router.get("/artist/")
+async def get_artist_info(name_artist: str):
+    result = lastfm.get_artist_art(name_artist)
     return result

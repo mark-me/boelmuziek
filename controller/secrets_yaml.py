@@ -3,6 +3,7 @@ import os
 
 class SecretsYAML():
     def __init__(self, file_path: str, app: str, expected_keys: set) -> None:
+        test = os.getcwd()
         self._file = file_path
         self.__create_path()
 
@@ -37,7 +38,7 @@ class SecretsYAML():
             return False, f"No settings for {self._app} in : {self._file}"
 
         # Check if there are apps
-        missing_keys = self._expected_keys - set(yaml_data.keys())
+        missing_keys = self._expected_keys - set(yaml_data[self._app].keys())
         if missing_keys:
             return False, f"Missing keys {', '.join(missing_keys)} for {self._app} in file {self._file}"
 
@@ -49,11 +50,14 @@ class SecretsYAML():
         Args:
             dict_secrets (dict): dictionary containing the secrets
         """
+        test = os.getcwd()
         try:
             with open(self._file, 'r') as file:
                 yaml_data = yaml.safe_load(file)
         except IOError:
-            pass
+            yaml_data = {}
+            with open(self._file, 'w') as file:
+                pass
         yaml_data[self._app] = dict_secrets
         with open(self._file, 'w') as file:
             yaml.safe_dump(yaml_data, file)

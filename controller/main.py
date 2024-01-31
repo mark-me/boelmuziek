@@ -1,4 +1,5 @@
 import os
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -7,7 +8,7 @@ import uvicorn
 from mpd_client import *
 from routers import mpd_system, mpd_playlist, mpd_library, snapserver, discogs, lastfm
 
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
 
 mpd = MPDController(host='localhost') #host='mpd') #
 

@@ -4,23 +4,24 @@ from pathlib import Path
 
 import discogs_client
 from discogs_client.exceptions import HTTPError
+from secrets_yaml import SecretsYAML
 
 class Discogs:
     def __init__(self) -> None:
         self._consumer_key = 'zvHFpFQWJrdDfCwoLalG'
         self._consumer_secret = 'FzRxDEGBbvWZpAmkQKBYHYeNdIjKxnVO'
-        Path("config").mkdir(exist_ok=True)
-        self._file_secrets = 'config/secrets.yml'
-        self._user_token: str = None
-        self._user_secret: str = None
-        self._user: str = None
-        self._user_name: str=None
+        self._secrets = {'user_token': 'user_secret'}
+        self._user_secrets_file = SecretsYAML(
+            file_path='config/secrets.yml',
+            app='discogs',
+            expected_keys=set(self._secrets.keys())
+            )
         self.user_agent = 'boelmuziek'
         self.discogsclient = discogs_client.Client(self.user_agent,
-                                                    consumer_key=self._consumer_key,
-                                                    consumer_secret=self._consumer_secret)
-        if self.has_user_tokens()['status_code'] == 200:
-            self.load_user_secrets()
+                                                   consumer_key=self._consumer_key,
+                                                   consumer_secret=self._consumer_secret)
+        # if self.has_user_tokens():
+        #     self.load_user_secrets()
 
     @property
     def user_token(self):
@@ -31,29 +32,12 @@ class Discogs:
         return self._user_secret
 
     def has_user_tokens(self) -> dict:
-        """ Checks if user secrets are already present"""
-        if not os.path.isfile(self._file_secrets):
-            return {'status_code': 500,
-                    'detail': 'There is no config file for secrets'}
-
-        # Load the YAML file
-        with open(self._file_secrets, 'r') as file:
-            try:
-                yaml_data = yaml.safe_load(file)
-            except yaml.YAMLError as e:
-                return {'status_code': 500,
-                        'detail': f"Error loading YAML file: {str(e)}"}
-        if not isinstance(yaml_data, dict):
-            return {'status_code': 500,
-                    'detail': 'YAML file does not contain a dictionary'}
-        # Check if 'token' and 'secret' keys are present
-        expected_keys = {'token', 'secret'}
-        missing_keys = expected_keys - set(yaml_data.keys())
-        if missing_keys:
-            return{'status_code': 500,
-                   'detail': f"Missing keys in YAML file: {', '.join(missing_keys)}"}
-        return {'status_code':200,
-                'detail':'YAML file is valid'}
+        result = self._user_secrets_file.read_secrets()
+        if result is not None:
+            self.discogsclient.set_token(token=result['user_token'], secret=result['user_secret'])
+            user = self._network.get_authenticated_user()
+        else:
+            return False
 
     def load_user_secrets(self) -> dict:
         """Load user secrets from file and reports on success
