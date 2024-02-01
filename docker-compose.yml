@@ -67,7 +67,6 @@ services:
       - ${DIR_MPD_PLAYLISTS}:/var/lib/mpd/playlists
       - ${DIR_MPD_DB}:/var/lib/mpd/database
       - ${DIR_MPD_STATE}:/var/lib/mpd/state/:rw
-      - ./mpd/mpdscribble.conf:/etc/mpdscribble.conf
   snapserver:
     image: ghcr.io/mark-me/boelmuziek-snapserver:${TAG_SNAPSERVER}
     container_name: snapserver

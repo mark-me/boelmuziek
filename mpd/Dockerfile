@@ -7,7 +7,6 @@ RUN apk -q update \
     && apk --no-cache add mpd \
     && apk --no-cache tzdata \
     && apk --no-cache add mpc \
-    && apk --no-cache add mpdscribble \
     && apk --no-cache add avahi avahi-tools
 
 RUN mkdir -p /var/lib/mpd/music \

@@ -1,12 +1,13 @@
-from pathlib import Path
-import os
+import asyncio
+import time
 import pylast
 
-from mpd_client import MPDController
+from mpd_client import *
 from secrets_yaml import SecretsYAML
 
 class LastFm:
     def __init__(self) -> None:
+        self._callback_auth = 'http://localhost:5080/lastfm/receive-token'
         self._secrets = {'user_token': ''}
         self._user_secrets_file = SecretsYAML(
             file_path='config/secrets.yml',
@@ -15,19 +16,46 @@ class LastFm:
             )
         self._api_key = 'e62c2f9c25ed0ee24bd8e21857f61899'
         self._api_secret = 'a4d7454f18985649f30fc67602d592ed'
-        self._network = pylast.LastFMNetwork(self._api_key, self._api_secret)
-        self._callback_auth = 'http://localhost:5080/lastfm/receive-token'
-        self.check_user_token()
+        #self._username = 'schizelmizels'
+        #self._password = pylast.md5('&b0GhK2PZYC6i8rWlc^R5pKBeF7xJ%CL')
+        secrets = self._user_secrets_file.read_secrets()
+        if secrets is None:
+            self._session_key = '0MHaliyS7fmyvpAoGutrmQxGIr0R3rGn'
+        elif 'user_token' in secrets.keys():
+            self._session_key = secrets['user_token']
+        else:
+            self._session_key :str= None
+        self._network = pylast.LastFMNetwork(api_key=self._api_key,
+                                             api_secret=self._api_secret,
+                                             session_key=self._session_key
+                                             )
 
     def check_user_token(self):
         result = self._user_secrets_file.read_secrets()
         if result is not None:
-            session_keygen = pylast.SessionKeyGenerator(self._network)
-            session_keygen
+            #session_keygen = pylast.SessionKeyGenerator(self._network)
             self._network.session_key = result['user_token']
         else:
             return False
         return True
+
+    # def request_user_access(self, callback_url: str=None) -> dict:
+    #     """ Prompt your user to "accept" the terms of your application. The application
+    #         will act on behalf of their discogs.com account."""
+    #     skg = pylast.SessionKeyGenerator(self._network)
+    #     url = skg.get_web_auth_url()
+    #     import webbrowser
+    #     webbrowser.open(url)
+    #     while True:
+    #         try:
+    #             session_key = skg.get_web_auth_session_key(url)
+    #             break
+    #         except pylast.WSError:
+    #             time.sleep(1)
+    #     self._secrets['user_token'] = session_key
+    #     self._user_secrets_file.write_secrets(dict_secrets=self._secrets)
+    #     self._network.session_key = session_key
+    #     return {'key': session_key}
 
     def request_user_access(self, callback_url: str=None) -> dict:
         """ Prompt your user to "accept" the terms of your application. The application
@@ -45,5 +73,45 @@ class LastFm:
     def get_artist_art(self, name_artist: str) -> str:
         artist = self._network.get_artist(artist_name=name_artist)
         track = self._network.get_track("Iron Maiden", "The Nomad")
-        info_artist = artist.info
-        return info_artist
+        info_artist = artist.get_mbid()
+        return { 'MusicBrainzID': info_artist }
+
+    def scrobble_track(self, name_artist: str, name_song: str, name_album: str=None) -> None:
+        now = int(time.time())
+        self._network.scrobble(artist=name_artist, title=name_song, album=name_album, timestamp=now)
+
+    def love_track(self, name_artist: str, name_song: str) -> None:
+        track = self._network.get_track(artist=name_artist, title=name_song)
+        track.love()
+
+    async def loop_scrobble(self) -> None:
+        """A loop for scrobbling
+        """
+        mpd = MPDController(host='localhost')
+        is_connected = await mpd.connect()
+
+        currently_playing :dict = None
+        while is_connected:
+            async for result in mpd.mpd_client.idle(['player']):
+
+                if currently_playing is not None:
+                    self.scrobble_track(
+                        name_artist=currently_playing['artist'],
+                        name_song=currently_playing['song'],
+                        name_album=currently_playing['album']
+                        )
+
+                currently_playing = await mpd.current_song()
+                if 'album' not in currently_playing.keys():
+                    currently_playing['album'] = None
+
+                self._network.update_now_playing(
+                    artist=currently_playing['artist'],
+                    title=currently_playing['song'],
+                    album=currently_playing['album']
+                    )
+
+
+if __name__ == "__main__":
+    lastfm = LastFm()
+    asyncio.run(lastfm.loop_scrobble())

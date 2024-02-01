@@ -33,3 +33,8 @@ async def accept_user_token(token: str):
 async def get_artist_info(name_artist: str):
     result = lastfm.get_artist_art(name_artist)
     return result
+
+@router.get("/love/")
+async def love_track(name_artist: str, name_song: str):
+    lastfm.love_track(name_artist=name_artist, name_song=name_song)
+    return { 'details': f"Loved '{name_song}' by {name_artist}"}
