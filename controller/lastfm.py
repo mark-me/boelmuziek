@@ -16,15 +16,11 @@ class LastFm:
             )
         self._api_key = 'e62c2f9c25ed0ee24bd8e21857f61899'
         self._api_secret = 'a4d7454f18985649f30fc67602d592ed'
-        #self._username = 'schizelmizels'
-        #self._password = pylast.md5('&b0GhK2PZYC6i8rWlc^R5pKBeF7xJ%CL')
         secrets = self._user_secrets_file.read_secrets()
-        if secrets is None:
-            self._session_key = '0MHaliyS7fmyvpAoGutrmQxGIr0R3rGn'
+        if secrets is None or (not 'user_token' in secrets.keys()):
+            self._session_key :str= None
         elif 'user_token' in secrets.keys():
             self._session_key = secrets['user_token']
-        else:
-            self._session_key :str= None
         self._network = pylast.LastFMNetwork(api_key=self._api_key,
                                              api_secret=self._api_secret,
                                              session_key=self._session_key
