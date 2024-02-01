@@ -1,7 +1,3 @@
-import os
-import yaml
-from pathlib import Path
-
 import discogs_client
 from discogs_client.exceptions import HTTPError
 from secrets_yaml import SecretsYAML
@@ -31,38 +27,12 @@ class Discogs:
     def user_secret(self):
         return self._user_secret
 
-    def has_user_tokens(self) -> dict:
+    def check_user_tokens(self) -> dict:
         result = self._user_secrets_file.read_secrets()
         if result is not None:
             self.discogsclient.set_token(token=result['user_token'], secret=result['user_secret'])
-            user = self._network.get_authenticated_user()
         else:
             return False
-
-    def load_user_secrets(self) -> dict:
-        """Load user secrets from file and reports on success
-
-        Returns:
-            dict: Report of sucess
-        """
-        with open(self._file_secrets, 'r') as file:
-            try:
-                data = yaml.safe_load(file)
-                self._user_secret = data['secret']
-                self._user_token = data['token']
-                self._user = data['user']
-                self._user_name = data['name']
-            except yaml.YAMLError as e:
-                return {'status_code': 500,
-                        'detail': f"Error loading YAML file: {str(e)}"}
-        self.discogsclient.set_token(token=self._user_token, secret=self._user_secret)
-        try:
-            self.discogsclient.identity()
-        except HTTPError:
-            return {'status_code': 401,
-                    'detail': 'Unable to authenticate.'}
-        return {'status_code': 200,
-                'detail': 'Loaded user credentials'}
 
     def request_user_access(self, callback_url: str=None) -> dict:
         """ Prompt your user to "accept" the terms of your application. The application
@@ -71,7 +41,7 @@ class Discogs:
         return {'message': 'Authorize BoelMuziek for access to your Discogs account :',
                 'url': url}
 
-    def validate_verification_code(self, verification_code: str) -> dict:
+    def save_user_token(self, verification_code: str) -> dict:
         """If the user accepts, discogs displays a key to the user that is used for
             verification. The key is required in the 2nd phase of authentication."""
         oauth_verifier = verification_code
@@ -88,10 +58,8 @@ class Discogs:
             'user': user.username,
             'name': user.name
         }
-        with open(self._file_secrets, 'w') as file:
-            yaml.dump(dict_user, file)
-        self.load_user_secrets()
-        return {'status_code': 200, 'detail': 'Verification complete'}
+        self._user_secrets_file.write_secrets(dict_secrets=dict_user)
+        return { 'status_code': 200, 'message': f"User {user.username} connected."}
 
     def get_artist_image(self, name_artist: str):
         search_results = self.discogsclient.search(name_artist, type='artist')

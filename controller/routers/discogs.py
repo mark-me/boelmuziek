@@ -14,19 +14,19 @@ router = APIRouter(
 
 @router.get("/check-credentials/")
 async def check_user_credentials():
-    if discogs.check_user_token():
+    if discogs.check_user_tokens():
         return{'description': 'All OK!'}
     else:
         raise HTTPException(status_code=401, detail='Let user re-authorize access to Last.fm account')
 
 @router.get("/get-user-access/")
 async def open_discogs_permissions_page():
-    result = discogs.request_user_access(callback_url="http://localhost:5080/discogs/verify_user/")
+    result = discogs.request_user_access(callback_url="http://localhost:5080/discogs/receive-token/")
     return result
 
-@router.get("/verify_user/")
-async def validate_verification_code(oauth_token: str, oauth_verifier: str):
-    result = discogs.validate_verification_code(oauth_verifier)
+@router.get("/receive-token/")
+async def accept_user_token(oauth_token: str, oauth_verifier: str):
+    result = discogs.save_user_token(oauth_verifier)
     return result
 
 @router.get("/artists-image/")
