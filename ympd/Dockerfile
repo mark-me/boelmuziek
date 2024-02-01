@@ -1,6 +1,7 @@
 FROM alpine:3.19.0
 
-RUN apk add ympd
+RUN apk --no-cache add ympd  \
+    && apk --no-cache add tzdata
 
 EXPOSE 8080
 

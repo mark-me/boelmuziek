@@ -5,7 +5,7 @@ ARG group=audio
 
 RUN apk -q update \
     && apk --no-cache add mpd \
-    && apk --no-cache tzdata \
+    && apk --no-cache add tzdata \
     && apk --no-cache add mpc \
     && apk --no-cache add avahi avahi-tools
 
