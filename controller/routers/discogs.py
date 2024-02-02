@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from typing import List
 from io import BytesIO
 
 from discogs import Discogs
@@ -11,6 +12,9 @@ router = APIRouter(
     prefix='/discogs',
     tags=['Discogs resources']
 )
+
+class Artist(BaseModel):
+    artist: str
 
 @router.get("/check-credentials/")
 async def check_user_credentials():
@@ -38,3 +42,7 @@ async def get_artists_image(name_artist: str):
     else:
         raise HTTPException(status_code=404, detail=f"Artist not found: {name_artist}")
         return result
+
+@router.post("/bulk-artist-images/")
+async def import_discogs_artist_images(list_artists: List[Artist]):
+    discogs.artist_images_bulk(list_artists)

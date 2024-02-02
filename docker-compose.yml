@@ -40,6 +40,7 @@ services:
       - music_stack
     volumes:
       - ${DIR_CONTROLLER_CONFIG}:/app/config
+      - ${DIR_ARTIST_IMAGES}:/app/artist_images
   icecast:
     image: ghcr.io/mark-me/boelmuziek-icecast:${TAG_ICECAST}
     container_name: icecast
