@@ -1,6 +1,8 @@
 import asyncio
 import time
 import pylast
+import os
+import sys
 
 from mpd_client import *
 from secrets_yaml import SecretsYAML
@@ -8,6 +10,7 @@ from secrets_yaml import SecretsYAML
 class LastFm:
     def __init__(self) -> None:
         self._callback_auth = 'http://localhost:5080/lastfm/receive-token'
+        dir_cur_working = os.getcwd()
         self._secrets = {'user_token': ''}
         self._user_secrets_file = SecretsYAML(
             file_path='config/secrets.yml',
@@ -29,7 +32,6 @@ class LastFm:
     def check_user_token(self):
         result = self._user_secrets_file.read_secrets()
         if result is not None:
-            #session_keygen = pylast.SessionKeyGenerator(self._network)
             self._network.session_key = result['user_token']
         else:
             return False
@@ -110,4 +112,7 @@ class LastFm:
 
 if __name__ == "__main__":
     lastfm = LastFm()
+    if not lastfm.check_user_token():
+        print("Not authenticated with Last.fm. Use API to login.\nTerminating.")
+        sys.exit(0)
     asyncio.run(lastfm.loop_scrobble())
