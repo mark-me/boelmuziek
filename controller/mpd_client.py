@@ -25,7 +25,6 @@ from datetime import datetime, timedelta
 from dateutil import parser
 from mpd.asyncio import MPDClient
 
-
 DEFAULT_COVER = 'images/default_cover_art.png'
 
 
@@ -46,8 +45,9 @@ class MPDController(object):
         if(not self.is_connected):
             try:
                 await self.mpd_client.connect(self._host, self._port)
+                logging.info(f"Connected to MPD server on {self._host}:{self._port}")
             except ConnectionError:
-                logging.error("Failed to connect to MPD server: host: ", self._host, " port: ", self._port)
+                logging.error(f"Failed to connect to MPD server on {self._host}:{self._port}")
                 return False
         return True
 
@@ -61,7 +61,7 @@ class MPDController(object):
             :param play_status: Playback action ['play', 'pause', 'stop', 'next', 'previous']
         """
         await self.connect()
-        logging.info("MPD player control %s", play_status)
+        logging.info(f"MPD player control set {play_status}")
         try:
             if play_status == 'play':
                 self.mpd_client.play()
@@ -74,7 +74,7 @@ class MPDController(object):
             elif play_status == 'previous':
                 self.mpd_client.previous()
         except:
-            logging.error("Could not send %s command to MPD", play_status)
+            logging.error(f"Could not send {play_status} command to MPD")
 
     async def outputs_get(self) -> list:
         """MPD music stream outputs
@@ -82,6 +82,7 @@ class MPDController(object):
         Returns:
             list: A list of dictionaries with stream output info
         """
+        logging.info("Retrieving a list of audio outputs.")
         await self.connect()
         outputs = await self.mpd_client.outputs()
         return outputs

@@ -7,6 +7,7 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Europe/Amsterdam
+      - HOST_MPD=${HOST_MPD}
     depends_on:
       - icecast
       - mpd
@@ -32,6 +33,9 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Europe/Amsterdam
+      - HOST_CONTROLLER=${HOST_CONTROLLER}
+      - HOST_MPD=${HOST_MPD}
+      - HOST_SNAPSERVER=${HOST_SNAPSERVER}
     depends_on:
       - mpd
     ports:
@@ -41,6 +45,7 @@ services:
     volumes:
       - ${DIR_CONTROLLER_CONFIG}:/app/config
       - ${DIR_ARTIST_IMAGES}:/app/artist_images
+      - ${DIR_CONTROLLER_LOG}:/app/log
   icecast:
     image: ghcr.io/mark-me/boelmuziek-icecast:${TAG_ICECAST}
     container_name: icecast

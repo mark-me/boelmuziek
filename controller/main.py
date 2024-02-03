@@ -4,11 +4,17 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 import uvicorn
+import logging
 
 from mpd_client import *
 from routers import mpd_system, mpd_playlist, mpd_library, snapserver, discogs, lastfm
 
-
+logging.basicConfig(
+    filename="log/controller.log",
+    filemode='w',
+    format='%(asctime)s %(module)s %(levelname)s:%(message)s', datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.DEBUG
+)
 
 mpd = MPDController(host='localhost') #host='mpd') #
 

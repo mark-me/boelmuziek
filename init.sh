@@ -4,9 +4,10 @@ set -euo pipefail
 
 DIR_MUSIC=~/Music
 DIR_DATA=~/Development/data/boelmuziek
-DIR_MPD_DB=$DIR_DATA/db
-DIR_MPD_PLAYLISTS=$DIR_DATA/playlists
-DIR_MPD_STATE=$DIR_DATA/mpdstate
+DIR_MPD=$DIR_DATA/mpd
+DIR_MPD_DB=$DIR_MPD/db
+DIR_MPD_PLAYLISTS=$DIR_MPD/playlists
+DIR_MPD_STATE=$DIR_MPD/mpdstate
 SNAPFIFO=$DIR_MPD_STATE/snapfifo
 
 if [ ! -d ${DIR_MPD_DB} ]; then

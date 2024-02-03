@@ -1,11 +1,19 @@
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-from io import BytesIO
+from dotenv import dotenv_values
+import os
 
 from lastfm import LastFm
 
-lastfm = LastFm()
+script_directory = os.path.dirname(os.path.abspath(__file__))
+os.chdir(script_directory)
+os.chdir('..')
+
+config = {
+    **dotenv_values(".env"),  # load shared development variables
+    **os.environ,  # override loaded values with environment variables
+}
+
+lastfm = LastFm(host=config['HOST_CONTROLLER'])
 
 router = APIRouter(
     prefix='/lastfm',

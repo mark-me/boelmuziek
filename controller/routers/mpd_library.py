@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
-import asyncio
 from enum import Enum
 from io import BytesIO
 
