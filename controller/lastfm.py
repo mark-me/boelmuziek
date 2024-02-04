@@ -17,11 +17,12 @@ logging.basicConfig(
     format='%(asctime)s %(module)s %(levelname)s:%(message)s', datefmt='%Y-%m-%d %H:%M:%S',
     level=logging.DEBUG
 )
+logger = logging.getLogger(__name__)
 
 class LastFm:
     def __init__(self, host: str) -> None:
         self._callback_auth = f"http://{host}:5080/lastfm/receive-token"
-        logging.info(f"Last/f authentication callback set to: {self._callback_auth}")
+        logger.info(f"Last/f authentication callback set to: {self._callback_auth}")
         self._secrets = {'user_token': ''}
         self._user_secrets_file = SecretsYAML(
             file_path='config/secrets.yml',
@@ -43,10 +44,10 @@ class LastFm:
     def check_user_token(self):
         result = self._user_secrets_file.read_secrets()
         if result is not None:
-            logging.info("Found user token in config file config/secrets.yml")
+            logger.info("Found user token in config file config/secrets.yml")
             self._network.session_key = result['user_token']
         else:
-            logging.warning("No user token found, user needs to authenticate the app use on Last.fm")
+            logger.warning("No user token found, user needs to authenticate the app use on Last.fm")
             return False
         return True
 
@@ -71,13 +72,13 @@ class LastFm:
     def request_user_access(self, callback_url: str=None) -> dict:
         """ Prompt your user to "accept" the terms of your application. The application
             will act on behalf of their discogs.com account."""
-        logging.info("Requesting the user access to her/his Last.fm account")
+        logger.info("Requesting the user access to her/his Last.fm account")
         url = "http://www.last.fm/api/auth/?api_key=" + self._api_key +"&cb=" + self._callback_auth
         return {'message': 'Authorize BoelMuziek for access to your Last.fm account :',
                 'url': url}
 
     def save_user_token(self, auth_token: str) -> dict:
-        logging.info("Receiving confirmation of access to the user\'s Last.fm account")
+        logger.info("Receiving confirmation of access to the user\'s Last.fm account")
         self._secrets['user_token'] = auth_token
         self._user_secrets_file.write_secrets(dict_secrets=self._secrets)
         self._network.session_key = auth_token
@@ -90,11 +91,11 @@ class LastFm:
 
     def scrobble_track(self, name_artist: str, name_song: str, name_album: str=None) -> None:
         now = int(time.time())
-        logging.info(f"Scrobbling {name_artist}-{name_song} to Last.fm")
+        logger.info(f"Scrobbling {name_artist}-{name_song} to Last.fm")
         self._network.scrobble(artist=name_artist, title=name_song, album=name_album, timestamp=now)
 
     def love_track(self, name_artist: str, name_song: str) -> None:
-        logging.info(f"Loving {name_artist}-{name_song} on Last.fm")
+        logger.info(f"Loving {name_artist}-{name_song} on Last.fm")
         track = self._network.get_track(artist=name_artist, title=name_song)
         track.love()
 
@@ -122,7 +123,7 @@ class LastFm:
                 if 'album' not in currently_playing.keys():
                     currently_playing['album'] = None
 
-                logging.info(f"Sending \'now playing\' {currently_playing['artist']}-{currently_playing['song']} to Last.fm")
+                logger.info(f"Sending \'now playing\' {currently_playing['artist']}-{currently_playing['song']} to Last.fm")
                 self._network.update_now_playing(
                     artist=currently_playing['artist'],
                     title=currently_playing['song'],

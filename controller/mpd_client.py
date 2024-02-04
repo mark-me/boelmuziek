@@ -20,10 +20,22 @@
 ==================================================================
 """
 import logging
+import os
 
 from datetime import datetime, timedelta
 from dateutil import parser
 from mpd.asyncio import MPDClient
+
+script_directory = os.path.dirname(os.path.abspath(__file__))
+os.chdir(script_directory)
+
+logging.basicConfig(
+    filename="log/mpd.log",
+    filemode='w',
+    format='%(asctime)s %(module)s %(levelname)s:%(message)s', datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.DEBUG
+)
+logger = logging.getLogger(__name__)
 
 DEFAULT_COVER = 'images/default_cover_art.png'
 
@@ -45,9 +57,9 @@ class MPDController(object):
         if(not self.is_connected):
             try:
                 await self.mpd_client.connect(self._host, self._port)
-                logging.info(f"Connected to MPD server on {self._host}:{self._port}")
+                logger.info(f"Connected to MPD server on {self._host}:{self._port}")
             except ConnectionError:
-                logging.error(f"Failed to connect to MPD server on {self._host}:{self._port}")
+                logger.error(f"Failed to connect to MPD server on {self._host}:{self._port}")
                 return False
         return True
 
@@ -61,7 +73,7 @@ class MPDController(object):
             :param play_status: Playback action ['play', 'pause', 'stop', 'next', 'previous']
         """
         await self.connect()
-        logging.info(f"MPD player control set {play_status}")
+        logger.info(f"MPD player control set {play_status}")
         try:
             if play_status == 'play':
                 self.mpd_client.play()
@@ -74,7 +86,7 @@ class MPDController(object):
             elif play_status == 'previous':
                 self.mpd_client.previous()
         except:
-            logging.error(f"Could not send {play_status} command to MPD")
+            logger.error(f"Could not send {play_status} command to MPD")
 
     async def outputs_get(self) -> list:
         """MPD music stream outputs
@@ -82,13 +94,14 @@ class MPDController(object):
         Returns:
             list: A list of dictionaries with stream output info
         """
-        logging.info("Retrieving a list of audio outputs.")
+        logger.info("Retrieving a list of audio outputs.")
         await self.connect()
         outputs = await self.mpd_client.outputs()
         return outputs
 
     async def output_toggle(self, id_output: int):
         await self.connect()
+        logger.info(f"Switch mute on/off for {id_output}")
         test = await self.mpd_client.toggleoutput(id_output)
         outputs = await self.mpd_client.outputs()
         return outputs[id_output]
@@ -153,8 +166,9 @@ class MPDController(object):
         try:
             cover = await self.mpd_client.albumart(uri)
             binary = cover['binary']
+            logger.info(f"Retrieved album art for {uri}")
         except:
-            logging.warning("Could not retrieve album cover of %s", uri)
+            logger.warning("Could not retrieve album cover of %s", uri)
             binary = None
         return binary
 
