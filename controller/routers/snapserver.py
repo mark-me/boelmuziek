@@ -5,7 +5,6 @@ import os
 
 from snapserver import SnapServer
 
-print(os.getcwd())
 config = {
     **dotenv_values(".env"),  # load shared development variables
     **os.environ,  # override loaded values with environment variables

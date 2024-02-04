@@ -34,15 +34,18 @@ async def loop_scrobble(lastfm: LastFm, mpd_client: MPDController) -> None:
                     )
 
             currently_playing = await mpd_client.current_song()
-            if 'album' not in currently_playing.keys():
-                currently_playing['album'] = None
+            if 'song' in currently_playing.keys():
+                if 'album' not in currently_playing.keys():
+                    currently_playing['album'] = None
 
-            logger.info(f"Sending \'now playing\' {currently_playing['artist']}-{currently_playing['song']} to Last.fm")
-            lastfm.now_playing_track(
-                name_artist=currently_playing['artist'],
-                name_song=currently_playing['song'],
-                name_album=currently_playing['album']
-                )
+                logger.info(f"Sending \'now playing\' {currently_playing['artist']}-{currently_playing['song']} to Last.fm")
+                lastfm.now_playing_track(
+                    name_artist=currently_playing['artist'],
+                    name_song=currently_playing['song'],
+                    name_album=currently_playing['album']
+                    )
+            else:
+                currently_playing :dict = None
 
 def main():
     config = {

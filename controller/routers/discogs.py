@@ -1,10 +1,18 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
+from dotenv import dotenv_values
+
 from pydantic import BaseModel
 from typing import List
 from io import BytesIO
+import os
 
 from discogs import Discogs
+
+config = {
+    **dotenv_values(".env"),  # load shared development variables
+    **os.environ,  # override loaded values with environment variables
+}
 
 discogs = Discogs()
 
@@ -25,7 +33,7 @@ async def check_user_credentials():
 
 @router.get("/get-user-access/")
 async def open_discogs_permissions_page():
-    result = discogs.request_user_access(callback_url="http://localhost:5080/discogs/receive-token/")
+    result = discogs.request_user_access(callback_url=f"http://localhost:{config['PORT_CONTROLLER']}/discogs/receive-token/")
     return result
 
 @router.get("/receive-token/")

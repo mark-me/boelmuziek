@@ -20,8 +20,6 @@ logger = logging.getLogger(__name__)
 
 class LastFm:
     def __init__(self, host: str, port: int) -> None:
-        #self._callback_auth = f"http://localhost:{port}/lastfm/receive-token" #f"http://{host}:5080/lastfm/receive-token"
-        #logger.info(f"Last/f authentication callback set to: {self._callback_auth}")
         self._secrets = {'user_token': ''}
         self._user_secrets_file = SecretsYAML(
             file_path='config/secrets.yml',
@@ -94,10 +92,12 @@ class LastFm:
 
     def now_playing_track(self, name_artist: str, name_song: str, name_album: str=None) -> None:
         logger.info(f"Set 'now playing' {name_artist}-{name_song} to Last.fm")
+        logger.info(f"Secret is: {self._network.session_key}")
         self._network.update_now_playing(artist=name_artist, title=name_song, album=name_album)
 
     def love_track(self, name_artist: str, name_song: str) -> None:
         logger.info(f"Loving {name_artist}-{name_song} on Last.fm")
+        logger.info(f"Secret is: {self._network.session_key}")
         track = self._network.get_track(artist=name_artist, title=name_song)
         track.love()
 
