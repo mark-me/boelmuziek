@@ -20,20 +20,14 @@
 ==================================================================
 """
 import logging
-import os
 
 from datetime import datetime, timedelta
 from dateutil import parser
 from mpd.asyncio import MPDClient
 
-script_directory = os.path.dirname(os.path.abspath(__file__))
-os.chdir(script_directory)
-
 logging.basicConfig(
-    filename="log/mpd.log",
-    filemode='w',
-    format='%(asctime)s %(module)s %(levelname)s:%(message)s', datefmt='%Y-%m-%d %H:%M:%S',
-    level=logging.DEBUG
+    format='%(levelname)s:\t%(asctime)s - %(module)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
@@ -48,6 +42,7 @@ class MPDController(object):
         self.mpd_client = MPDClient()
         self._host = host
         self._port = port
+        logging.info(f"MPD connection host: {host}, port: {port}")
 
     async def connect(self) -> bool:
         """ Connects to mpd server.
@@ -56,8 +51,9 @@ class MPDController(object):
         """
         if(not self.is_connected):
             try:
+                logger.info(f"Connecting to MPD server on {self._host}:{self._port}")
                 await self.mpd_client.connect(self._host, self._port)
-                logger.info(f"Connected to MPD server on {self._host}:{self._port}")
+
             except ConnectionError:
                 logger.error(f"Failed to connect to MPD server on {self._host}:{self._port}")
                 return False

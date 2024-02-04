@@ -36,6 +36,7 @@ services:
       - HOST_CONTROLLER=${HOST_CONTROLLER}
       - HOST_MPD=${HOST_MPD}
       - HOST_SNAPSERVER=${HOST_SNAPSERVER}
+      - PORT_CONTROLLER=${PORT_CONTROLLER}
     depends_on:
       - mpd
     ports:
@@ -45,7 +46,6 @@ services:
     volumes:
       - ${DIR_CONTROLLER_CONFIG}:/app/config
       - ${DIR_ARTIST_IMAGES}:/app/artist_images
-      - ${DIR_CONTROLLER_LOG}:/app/log
   icecast:
     image: ghcr.io/mark-me/boelmuziek-icecast:${TAG_ICECAST}
     container_name: icecast

@@ -1,28 +1,29 @@
-import asyncio
-import time
 import pylast
 from dotenv import dotenv_values
+
+import asyncio
+import time
 import os
 import logging
 
 from mpd_client import *
-from secrets_yaml import SecretsYAML
+from utils import SecretsYAML
 
-script_directory = os.path.dirname(os.path.abspath(__file__))
-os.chdir(script_directory)
+config = {
+    **dotenv_values(".env"),  # load shared development variables
+    **os.environ,  # override loaded values with environment variables
+}
 
 logging.basicConfig(
-    filename="log/lasfm.log",
-    filemode='w',
-    format='%(asctime)s %(module)s %(levelname)s:%(message)s', datefmt='%Y-%m-%d %H:%M:%S',
-    level=logging.DEBUG
+    format='%(levelname)s:\t%(asctime)s - %(module)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
 class LastFm:
-    def __init__(self, host: str) -> None:
-        self._callback_auth = f"http://{host}:5080/lastfm/receive-token"
-        logger.info(f"Last/f authentication callback set to: {self._callback_auth}")
+    def __init__(self, host: str, port: int) -> None:
+        #self._callback_auth = f"http://localhost:{port}/lastfm/receive-token" #f"http://{host}:5080/lastfm/receive-token"
+        #logger.info(f"Last/f authentication callback set to: {self._callback_auth}")
         self._secrets = {'user_token': ''}
         self._user_secrets_file = SecretsYAML(
             file_path='config/secrets.yml',
@@ -47,7 +48,7 @@ class LastFm:
             logger.info("Found user token in config file config/secrets.yml")
             self._network.session_key = result['user_token']
         else:
-            logger.warning("No user token found, user needs to authenticate the app use on Last.fm")
+            #logger.warning("No user token found, user needs to authenticate the app use on Last.fm")
             return False
         return True
 
@@ -72,8 +73,8 @@ class LastFm:
     def request_user_access(self, callback_url: str=None) -> dict:
         """ Prompt your user to "accept" the terms of your application. The application
             will act on behalf of their discogs.com account."""
-        logger.info("Requesting the user access to her/his Last.fm account")
-        url = "http://www.last.fm/api/auth/?api_key=" + self._api_key +"&cb=" + self._callback_auth
+        logger.info(f"Requesting the user access to her/his Last.fm account with callback_url {callback_url}")
+        url = f"http://www.last.fm/api/auth/?api_key={self._api_key}&cb={callback_url}"
         return {'message': 'Authorize BoelMuziek for access to your Last.fm account :',
                 'url': url}
 
@@ -99,13 +100,13 @@ class LastFm:
         track = self._network.get_track(artist=name_artist, title=name_song)
         track.love()
 
-    async def loop_scrobble(self, mpd_host:str) -> None:
+    async def loop_scrobble(self, host_mpd: str) -> None:
         """A loop for scrobbling
 
         Args:
             mpd_host (str): The host of the MPD server
         """
-        mpd = MPDController(host='localhost')
+        mpd = MPDController(host=host_mpd)
         is_connected = await mpd.connect()
 
         currently_playing :dict = None
@@ -141,12 +142,12 @@ if __name__ == "__main__":
         **os.environ,  # override loaded values with environment variables
     }
 
-    lastfm = LastFm(host=config['HOST_CONTROLLER'])
+    lastfm = LastFm(host=config['HOST_CONTROLLER'], port=config['PORT_CONTROLLER'])
     is_first_pass = True
     while not lastfm.check_user_token():
         if is_first_pass:
-            print("Not authenticated with Last.fm. Use API to login.")
+            logger.error("Not authenticated with Last.fm. Use API to login.")
             is_first_pass = False
 
-    print("Successfully logged in Last.fm")
-    asyncio.run(lastfm.loop_scrobble(mpd_host=config['HOST_MPD']))
+    logger.info("Successfully logged in Last.fm")
+    asyncio.run(lastfm.loop_scrobble(host_mpd=config['HOST_MPD']))

@@ -11,7 +11,6 @@ COPY . .
 RUN rm .env
 
 VOLUME /app/config
-VOLUME /app/log
 VOLUME /app/artist_images
 
 EXPOSE 5000

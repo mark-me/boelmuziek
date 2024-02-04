@@ -1,16 +1,21 @@
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
+from dotenv import dotenv_values
 
 from io import BytesIO
-import asyncio
-
 from pydantic import BaseModel
 from enum import Enum
 from typing import List
+import os
 
-from mpd_client import *
+from mpd_client import MPDController
 
-mpd = MPDController(host='localhost')
+config = {
+    **dotenv_values(".env"),  # load shared development variables
+    **os.environ,  # override loaded values with environment variables
+}
+
+mpd = MPDController(host=config['HOST_MPD'])
 
 router = APIRouter(
     prefix='/playlist',

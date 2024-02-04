@@ -1,7 +1,17 @@
 from fastapi import APIRouter
-from snapcast_client import *
+from dotenv import dotenv_values
 
-snapserver = SnapServer(host='localhost')
+import os
+
+from snapserver import SnapServer
+
+print(os.getcwd())
+config = {
+    **dotenv_values(".env"),  # load shared development variables
+    **os.environ,  # override loaded values with environment variables
+}
+
+snapserver = SnapServer(host=config['HOST_SNAPSERVER'])
 
 router = APIRouter(
     prefix='/snapserver',

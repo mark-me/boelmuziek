@@ -1,20 +1,15 @@
 from fastapi import APIRouter, HTTPException
 from dotenv import dotenv_values
 import os
-from dotenv import dotenv_values
 
 from lastfm import LastFm
-
-script_directory = os.path.dirname(os.path.abspath(__file__))
-os.chdir(script_directory)
-os.chdir('..')
 
 config = {
     **dotenv_values(".env"),  # load shared development variables
     **os.environ,  # override loaded values with environment variables
 }
 
-lastfm = LastFm(host=config['HOST_CONTROLLER'])
+lastfm = LastFm(host=config['HOST_CONTROLLER'], port=config['PORT_CONTROLLER'])
 
 router = APIRouter(
     prefix='/lastfm',
@@ -30,7 +25,7 @@ async def check_user_credentials():
 
 @router.get("/get-user-access/")
 async def open_lastfm_permissions_page():
-    result = lastfm.request_user_access()
+    result = lastfm.request_user_access(callback_url=f"http://localhost:{config['PORT_CONTROLLER']}/lastfm/receive-token")
     return result
 
 @router.get("/receive-token/")

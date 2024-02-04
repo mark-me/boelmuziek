@@ -1,8 +1,17 @@
-from pathlib import Path
-import time
 import discogs_client
 from discogs_client.exceptions import HTTPError
-from secrets_yaml import SecretsYAML
+
+from pathlib import Path
+import time
+import logging
+
+from utils import SecretsYAML
+
+logging.basicConfig(
+    format='%(levelname)s:\t%(asctime)s - %(module)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 class Discogs:
     def __init__(self) -> None:
@@ -31,13 +40,16 @@ class Discogs:
     def check_user_tokens(self) -> dict:
         result = self._user_secrets_file.read_secrets()
         if result is not None:
+            logger.info("Found user token in config file config/secrets.yml")
             self.discogsclient.set_token(token=result['token'], secret=result['secret'])
         else:
+            logger.warning("No user token found, user needs to authenticate the app use on Discogs")
             return False
 
     def request_user_access(self, callback_url: str=None) -> dict:
         """ Prompt your user to "accept" the terms of your application. The application
             will act on behalf of their discogs.com account."""
+        logger.info(f"Requesting user access to Discogs account with callback {callback_url}")
         self._user_token, self._user_secret, url = self.discogsclient.get_authorize_url(callback_url=callback_url)
         return {'message': 'Authorize BoelMuziek for access to your Discogs account :',
                 'url': url}
@@ -47,8 +59,10 @@ class Discogs:
             verification. The key is required in the 2nd phase of authentication."""
         oauth_verifier = verification_code
         try:
+            logger.info("Receiving confirmation of access to the user\'s Discogs account")
             self._user_token, self._user_secret = self.discogsclient.get_access_token(oauth_verifier)
         except HTTPError:
+            logger.error("Failed to authenticate.")
             return{'status_code': 401,
                    'detail': 'Unable to authenticate.'}
         user = self.discogsclient.identity() # Fetch the identity object for the current logged in user.
@@ -60,6 +74,7 @@ class Discogs:
             'name': user.name
         }
         self._user_secrets_file.write_secrets(dict_secrets=dict_user)
+        logger.info(f"Connected and written user credentials of {user.name}.")
         return { 'status_code': 200, 'message': f"User {user.username} connected."}
 
     def get_artist_image(self, name_artist: str) -> dict:
@@ -67,6 +82,7 @@ class Discogs:
 
         # Load cached image
         if Path(path_image).is_file():
+            logger.info(f"Loading art of {name_artist} from cache.")
             with open(path_image, 'rb') as file:
                 content = file.read()
             return {'status': 200,
@@ -75,11 +91,13 @@ class Discogs:
         # Fetch image from discogs
         try:
             search_results = self.discogsclient.search(name_artist, type='artist')
+            logger.info(f"Fetching art of {name_artist} Discogs.")
         except HTTPError as e:
             if e.status_code == 429:
                 time.sleep(60)
 
         if search_results == None:
+            logger.error(f"Artist not found: {name_artist}")
             return{'status_code': 404,
                    'detail': f"Artist not found: {name_artist}"}
         else:
@@ -90,7 +108,9 @@ class Discogs:
                 # Write artist image to cache
                 with open(path_image, "wb") as file:
                     file.write(content)
+                logger.ingo(f"Artist image found and saved for: {name_artist}")
             except (TypeError, IndexError):
+                logger.error(f"No artist image found for: {name_artist}")
                 return {'status_code': 404,
                         'detail': f"No artist image found : {name_artist}"}
             except HTTPError as e:

@@ -1,12 +1,19 @@
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
+from dotenv import dotenv_values
 from enum import Enum
 from io import BytesIO
+import os
 
-from mpd_client import *
+from mpd_client import MPDController
 
-mpd = MPDController(host='localhost')
+config = {
+    **dotenv_values(".env"),  # load shared development variables
+    **os.environ,  # override loaded values with environment variables
+}
+
+mpd = MPDController(host=config['HOST_MPD'])
 
 router = APIRouter(
     prefix='/library',

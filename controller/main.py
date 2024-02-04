@@ -4,12 +4,17 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 import uvicorn
-
+from dotenv import dotenv_values
 
 from mpd_client import *
 from routers import mpd_system, mpd_playlist, mpd_library, snapserver, discogs, lastfm
 
-mpd = MPDController(host='localhost') #host='mpd') #
+config = {
+    **dotenv_values(".env"),  # load shared development variables
+    **os.environ,  # override loaded values with environment variables
+}
+
+mpd = MPDController(host=config['HOST_MPD'])
 
 app = FastAPI()
 app.include_router(mpd_system.router)

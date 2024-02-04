@@ -1,13 +1,18 @@
-import asyncio
+from dotenv import dotenv_values
 import snapcast.control
+
+import asyncio
+import os
+
+config = {
+    **dotenv_values(".env"),  # load shared development variables
+    **os.environ,  # override loaded values with environment variables
+}
 
 class SnapServer():
     def __init__(self, host) -> None:
         self.host = host
         self.loop = asyncio.get_event_loop() # Loop needed for snapserver
-        # self.server = self.loop.run_until_complete(
-        #     snapcast.control.create_server(self.loop, host)
-        #     )
 
     async def connect(self):
         self.server = await snapcast.control.create_server(self.loop, self.host)
@@ -68,7 +73,7 @@ class SnapServer():
 
 
 async def main(loop):
-    snapserver = SnapServer(host='localhost')
+    snapserver = SnapServer(host=config['HOST_SNAPSERVER'])
     clients = await snapserver.list_clients()
     for client in clients:
         print(client)

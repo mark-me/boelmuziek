@@ -1,8 +1,17 @@
 from fastapi import APIRouter
-import asyncio
-from mpd_client import *
+from dotenv import dotenv_values
 
-mpd = MPDController(host='localhost')
+import asyncio
+import os
+
+from mpd_client import MPDController
+
+config = {
+    **dotenv_values(".env"),  # load shared development variables
+    **os.environ,  # override loaded values with environment variables
+}
+
+mpd = MPDController(host=config['HOST_MPD'])
 
 async def mpd_connect() -> bool:
     is_connected = mpd.is_connected
