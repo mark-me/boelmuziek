@@ -295,6 +295,11 @@ class MPDController(object):
 
         return lst_songs
 
+    async def playlist_move(self, start: int, end: int, to: int):
+
+        playlist = await self.playlist()
+        return playlist
+
     async def playlist_add_file(self, file: str, position: int, start_playing: bool, clear: bool=False):
         """Adds a file to the playlist
 

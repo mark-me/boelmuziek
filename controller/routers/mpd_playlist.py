@@ -72,6 +72,11 @@ async def execute_player_control(action: PlaylistControlType):
     control_status = await mpd.get_status()
     return control_status['state']
 
+@router.get("/move/")
+async def move_playlist_items(start: int, end: int, to: int):
+    playlist = await mpd.playlist_move(start=start, end=end, to=to)
+    return playlist
+
 @router.get("/clear/")
 async def clear_playlist():
     """Clear the current playlist
