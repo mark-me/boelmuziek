@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from dotenv import dotenv_values
+
 import os
 
 from lastfm import LastFm

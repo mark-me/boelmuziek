@@ -48,7 +48,6 @@ class LastFm:
             logger.info("Found user token in config file config/secrets.yml")
             self._network.session_key = result['user_token']
         else:
-            #logger.warning("No user token found, user needs to authenticate the app use on Last.fm")
             return False
         return True
 
