@@ -1,12 +1,10 @@
 import pylast
 from dotenv import dotenv_values
 
-import asyncio
 import time
 import os
 import logging
 
-from mpd_client import *
 from utils import SecretsYAML
 
 config = {
@@ -94,59 +92,16 @@ class LastFm:
         logger.info(f"Scrobbling {name_artist}-{name_song} to Last.fm")
         self._network.scrobble(artist=name_artist, title=name_song, album=name_album, timestamp=now)
 
+    def now_playing_track(self, name_artist: str, name_song: str, name_album: str=None) -> None:
+        logger.info(f"Set 'now playing' {name_artist}-{name_song} to Last.fm")
+        self._network.update_now_playing(artist=name_artist, title=name_song, album=name_album)
+
     def love_track(self, name_artist: str, name_song: str) -> None:
         logger.info(f"Loving {name_artist}-{name_song} on Last.fm")
         track = self._network.get_track(artist=name_artist, title=name_song)
         track.love()
 
-    async def loop_scrobble(self, host_mpd: str) -> None:
-        """A loop for scrobbling
-
-        Args:
-            mpd_host (str): The host of the MPD server
-        """
-        mpd = MPDController(host=host_mpd)
-        is_connected = await mpd.connect()
-
-        currently_playing :dict = None
-        while is_connected:
-            async for result in mpd.mpd_client.idle(['player']):
-
-                if currently_playing is not None:
-                    self.scrobble_track(
-                        name_artist=currently_playing['artist'],
-                        name_song=currently_playing['song'],
-                        name_album=currently_playing['album']
-                        )
-
-                currently_playing = await mpd.current_song()
-                if 'album' not in currently_playing.keys():
-                    currently_playing['album'] = None
-
-                logger.info(f"Sending \'now playing\' {currently_playing['artist']}-{currently_playing['song']} to Last.fm")
-                self._network.update_now_playing(
-                    artist=currently_playing['artist'],
-                    title=currently_playing['song'],
-                    album=currently_playing['album']
-                    )
 
 
-if __name__ == "__main__":
-    script_directory = os.path.dirname(os.path.abspath(__file__))
-    os.chdir(script_directory)
-    os.chdir('..')
 
-    config = {
-        **dotenv_values(".env"),  # load shared development variables
-        **os.environ,  # override loaded values with environment variables
-    }
 
-    lastfm = LastFm(host=config['HOST_CONTROLLER'], port=config['PORT_CONTROLLER'])
-    is_first_pass = True
-    while not lastfm.check_user_token():
-        if is_first_pass:
-            logger.error("Not authenticated with Last.fm. Use API to login.")
-            is_first_pass = False
-
-    logger.info("Successfully logged in Last.fm")
-    asyncio.run(lastfm.loop_scrobble(host_mpd=config['HOST_MPD']))

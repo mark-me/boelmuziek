@@ -1,5 +1,5 @@
 #!/bin/bash
 
-python lastfm.py &
+python mpd_scrobbler.py &
 
 uvicorn main:app --host 0.0.0.0 --port 5000
