@@ -108,7 +108,7 @@ class Discogs:
                 # Write artist image to cache
                 with open(path_image, "wb") as file:
                     file.write(content)
-                logger.ingo(f"Artist image found and saved for: {name_artist}")
+                logger.info(f"Artist image found and saved for: {name_artist}")
             except (TypeError, IndexError):
                 logger.error(f"No artist image found for: {name_artist}")
                 return {'status_code': 404,
