@@ -88,19 +88,25 @@ class LastFm:
     def scrobble_track(self, name_artist: str, name_song: str, name_album: str=None) -> None:
         now = int(time.time())
         logger.info(f"Scrobbling {name_artist}-{name_song} to Last.fm")
-        self._network.scrobble(artist=name_artist, title=name_song, album=name_album, timestamp=now)
+        try:
+            self._network.scrobble(artist=name_artist, title=name_song, album=name_album, timestamp=now)
+        except pylast.NetworkError as e:
+            logger.error(f"Failed to scrobble \'{name_artist}-{name_song}\' due to {e.underlying_error}")
 
     def now_playing_track(self, name_artist: str, name_song: str, name_album: str=None) -> None:
         logger.info(f"Set 'now playing' {name_artist}-{name_song} to Last.fm")
-        logger.info(f"Secret is: {self._network.session_key}")
-        self._network.update_now_playing(artist=name_artist, title=name_song, album=name_album)
+        try:
+            self._network.update_now_playing(artist=name_artist, title=name_song, album=name_album)
+        except pylast.NetworkError as e:
+            logger.error(f"Failed to set Now Playing for \'{name_artist}-{name_song}\' due to {e.underlying_error}")
 
     def love_track(self, name_artist: str, name_song: str) -> None:
         logger.info(f"Loving {name_artist}-{name_song} on Last.fm")
-        logger.info(f"Secret is: {self._network.session_key}")
-        track = self._network.get_track(artist=name_artist, title=name_song)
-        track.love()
-
+        try:
+            track = self._network.get_track(artist=name_artist, title=name_song)
+            track.love()
+        except pylast.NetworkError as e:
+            logger.error(f"Failed to set love for \'{name_artist}-{name_song}\' due to {e.underlying_error}")
 
 
 
