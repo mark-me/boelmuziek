@@ -1,4 +1,6 @@
 import os
+
+from routers import mpd_queue
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI, Request
@@ -7,7 +9,7 @@ import uvicorn
 from dotenv import dotenv_values
 
 from mpd_client import *
-from routers import mpd_system, mpd_playlist, mpd_library, snapserver, discogs, lastfm
+from routers import mpd_system, mpd_library, snapserver, discogs, lastfm
 
 config = {
     **dotenv_values(".env"),  # load shared development variables
@@ -18,7 +20,7 @@ mpd = MPDController(host=config['HOST_MPD'])
 
 app = FastAPI()
 app.include_router(mpd_system.router)
-app.include_router(mpd_playlist.router)
+app.include_router(mpd_queue.router)
 app.include_router(mpd_library.router)
 app.include_router(snapserver.router)
 app.include_router(lastfm.router)

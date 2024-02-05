@@ -274,7 +274,7 @@ class MPDController(object):
             dict_stats['db_update'] = datetime.fromtimestamp(int(dict_stats['db_update']))
         return(dict_stats)
 
-    async def playlist(self) -> list:
+    async def queue(self) -> list:
         """ Current playlist
 
         :return: List of dictionaries, with the song information and the information about it's position in the playlist
@@ -303,8 +303,8 @@ class MPDController(object):
         playing = self.__rename_song_dict_keys(playing)
         return playing
 
-    async def playlist_add(self, type_asset: str, name: str, play: bool=False, replace=False):
-        """ Adds a music asset to the current playlist
+    async def queue_add(self, type_asset: str, name: str, play: bool=False, replace=False):
+        """ Adds a music asset to the current queue
 
         :param type: The name of the album
         :param filter: The string that should be searched against, the searches are done with partial matching
@@ -319,19 +319,19 @@ class MPDController(object):
         if(lst_songs == None or len(lst_songs) == 0):
             return({'error': type_asset + ' \'' + name + '\' not found.'})
 
-        # Add songs to the current playlist
+        # Add songs to the current queue
         for song in lst_songs:
             song_added = await self.mpd_client.findadd('file', song['file'])
 
         return lst_songs
 
-    async def playlist_move(self, start: int, end: int, to: int):
-
-        playlist = await self.playlist()
+    async def queue_move(self, start: int, end: int, to: int):
+        await self.mpd_client.move(1,7)
+        playlist = await self.queue()
         return playlist
 
-    async def playlist_add_file(self, file: str, position: int, start_playing: bool, clear: bool=False):
-        """Adds a file to the playlist
+    async def queue_add_file(self, file: str, position: int, start_playing: bool, clear: bool=False):
+        """Adds a file to the queue
 
         Args:
             file (str): A file to be added
@@ -349,10 +349,10 @@ class MPDController(object):
         await self.mpd_client.addid(file, position)
         if start_playing:
             await self.mpd_client.play(position)
-        playlist = await self.playlist()
+        playlist = await self.queue()
         return playlist
 
-    async def playlist_clear(self):
+    async def queue_clear(self):
         """Clears the current playlist"""
         await self.connect()
         self.mpd_client.clear()
