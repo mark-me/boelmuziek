@@ -59,6 +59,21 @@ async def get_current_song():
     current_song = await mpd.current_song()
     return current_song
 
+@router.get("/play-time/")
+async def seek_position_in_current_song(time_seconds: str):
+    await mpd.seek_current_song_time(time_seconds=time_seconds)
+
+@router.get("/play-song/")
+async def start_playing_from_playlist(position: int):
+    is_success = await mpd.play_on_playlist(position=position)
+    if is_success:
+        msg = {'status_code': 200,
+               'details': 'Started playback'}
+    else:
+        msg = {'status_code': 406,
+               'details': 'Unable to start playing'}
+    return msg
+
 @router.get("/current-cover/")
 async def get_current_song_cover():
     current_song = await mpd.current_song()
@@ -87,6 +102,6 @@ async def clear_playlist():
     await mpd.playlist_clear()
     status = await mpd.get_status()
     if status['playlistlength'] == 0:
-        return {'status_code': '200', 'message': 'Cleared playlist'}
+        return {'status_code': '200', 'detail': 'Cleared playlist'}
     else:
-        return{'status': 'Error', 'message': 'Couldn\'t clear playlist'}
+        return {'status_code': 'Error', 'detail': 'Couldn\'t clear playlist'}

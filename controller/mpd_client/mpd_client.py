@@ -84,6 +84,36 @@ class MPDController(object):
         except:
             logger.error(f"Could not send {play_status} command to MPD")
 
+    async def seek_current_song_time(self, time_seconds: str):
+        """Seeks to the position TIME (in seconds; fractions allowed) within the current song.
+           If prefixed by \'+\' or \'-\', then the time is relative to the current playing position.
+        """
+        await self.connect()
+        await self.mpd_client.seekcur(time_seconds)
+
+    async def play_on_playlist(self, position: int) -> bool:
+        """Begins playing the playlist at song at _position
+
+        Args:
+            position (int): _The position of a song in the playlist_
+
+        Returns:
+            bool: Success of play selection
+        """
+        await self.connect()
+        status = await self.get_status()
+        if status is not None:
+            qty_songs_playlist = status['playlistlength']
+            if qty_songs_playlist > position:
+                await self.mpd_client.play(position)
+                logger.info(f"Selected a song at position {position} to start playing.")
+                return True
+            else:
+                logger.error(f"Selected a song at position {position} which is larger than the number of songs in the playlist {qty_songs_playlist}")
+        else:
+            logger.error("Could not retrieve the status of MPD.")
+        return False
+
     async def outputs_get(self) -> list:
         """MPD music stream outputs
 
@@ -244,7 +274,7 @@ class MPDController(object):
             dict_stats['db_update'] = datetime.fromtimestamp(int(dict_stats['db_update']))
         return(dict_stats)
 
-    async def playlist(self):
+    async def playlist(self) -> list:
         """ Current playlist
 
         :return: List of dictionaries, with the song information and the information about it's position in the playlist
@@ -263,7 +293,7 @@ class MPDController(object):
         lst_songs = self.__rename_song_dict_keys(lst_songs)
         return lst_songs
 
-    async def current_song(self):
+    async def current_song(self) -> dict:
         """ Current song in the playlist, regardless whether it is playing, paused or stopped
 
         :return: A dictionary, with the song information and the information about it's position in the playlist
