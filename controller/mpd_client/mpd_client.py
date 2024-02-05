@@ -281,7 +281,7 @@ class MPDController(object):
         """
         await self.connect()
         lst_songs = []
-        playlist_pos = 1
+        playlist_pos = 0
         playlist = await self.mpd_client.playlist()
 
         # Getting complete songs information

@@ -13,13 +13,6 @@ config = {
 
 mpd = MPDController(host=config['HOST_MPD'])
 
-async def mpd_connect() -> bool:
-    is_connected = mpd.is_connected
-    if(not is_connected):
-        task_connect = asyncio.create_task(mpd.connect())
-        is_connected = await task_connect
-    return is_connected
-
 router = APIRouter(
     prefix='/system',
     tags=['MPD status']
@@ -27,30 +20,41 @@ router = APIRouter(
 
 @router.get("/status/")
 async def status():
-    await mpd_connect()
+    """
+    Retrieves the server's status on the queue settings, queue progress and playback status
+    """
     status = await mpd.get_status()
     return status
 
 @router.get("/output/list")
 async def list_outputs():
-    await mpd_connect()
+    """
+    Lists the output devices MPD uses to stream it's playback to
+    """
     outputs = await mpd.outputs_get()
+    return outputs
+
+@router.get("/output/toggle")
+async def toggle_output(id_output: int):
+    """
+    Toggles MPD output streams based on their id.
+    """
+    outputs = await mpd.output_toggle(id_output)
     return outputs
 
 @router.get('/statistics/')
 async def server_statistics():
-    await mpd_connect()
+    """
+    Server statistics on uptime, playtime and music library statistics.
+    """
     server_stats = await mpd.get_statistics()
     return server_stats
 
-@router.get("/output/toggle")
-async def toggle_output(id_output: int):
-    await mpd_connect()
-    outputs = await mpd.output_toggle(id_output)
-    return outputs
-
 @router.get("/update-db/")
 async def update_mpd_library():
-    await mpd_connect()
+    """
+    Update the MPD music library to reflect changes to the music files.
+    """
     update = await mpd.mpd_client.update()
-    return {'message': "Update #" + update}
+    return {'status_code': 200,
+            'details': "Update #" + update}
