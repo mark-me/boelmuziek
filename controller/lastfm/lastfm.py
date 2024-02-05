@@ -80,10 +80,11 @@ class LastFm:
         self._network.session_key = auth_token
         return { 'status_code': 200, 'message': f"User connected."}
 
-    def get_artist_art(self, name_artist: str) -> str:
+    def get_artist_bio(self, name_artist: str) -> str:
+        logger.info(f"Retrieving artist bio of {name_artist}")
         artist = self._network.get_artist(artist_name=name_artist)
-        info_artist = artist.get_mbid()
-        return { 'MusicBrainzID': info_artist }
+        bio = artist.get_bio_content()
+        return bio
 
     def scrobble_track(self, name_artist: str, name_song: str, name_album: str=None) -> None:
         now = int(time.time())
@@ -108,6 +109,19 @@ class LastFm:
         except pylast.NetworkError as e:
             logger.error(f"Failed to set love for \'{name_artist}-{name_song}\' due to {e.underlying_error}")
 
+    def get_top_albums(self, period: str='overall', page: int=1) -> dict:
+        user = self._network.get_user(username='schizelmizels')
+        #user = self._network.get_authenticated_user()
+        #test = user.get_name()
+        lst_albums = []
+        try:
+            top_items = user.get_top_albums()
+        except pylast.NetworkError as e:
+            logger.error(f"Failed to get Top Albums because of {e}")
+        for top_item in top_items:
+            lst_albums.append({'name_artist': top_item.item.artist.name, 'name_album': top_item.item.title, 'qty_plays': top_item.weight})
+
+        return lst_albums
 
 
 
