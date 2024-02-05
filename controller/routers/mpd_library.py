@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from dotenv import dotenv_values
@@ -88,5 +88,8 @@ async def get_album_cover(name_album_artist: str, name_album: str):
     - **name_album**: Name of the album you're looking for.
     """
     dict_image = await mpd.get_album_cover(name_artist=name_album_artist, name_album=name_album)
+    if dict_image is None:
+        raise HTTPException(status_code=404,
+                            detail=f"Cover art not found for '{name_album_artist} - {name_album}'")
     headers = {"Content-Type": dict_image['image_format']}
     return StreamingResponse(BytesIO(dict_image['image']), headers=headers)

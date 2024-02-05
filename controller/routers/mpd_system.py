@@ -56,5 +56,4 @@ async def update_mpd_library():
     Update the MPD music library to reflect changes to the music files.
     """
     update = await mpd.mpd_client.update()
-    return {'status_code': 200,
-            'details': "Update #" + update}
+    return {'details': "Update #" + update}

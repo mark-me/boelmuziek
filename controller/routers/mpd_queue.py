@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from dotenv import dotenv_values
 
@@ -89,11 +89,10 @@ async def start_playing_from_queue(position: int=0):
     """
     is_success = await mpd.play_on_queue(position=position)
     if is_success:
-        msg = {'status_code': 200,
-               'details': 'Started playback'}
+        msg = {'details': 'Started playback'}
     else:
-        msg = {'status_code': 406,
-               'details': 'Unable to start playing'}
+        raise HTTPException(status_code=406,
+                            detail='Unable to start playing')
     return msg
 
 @router.get("/current-cover/")
@@ -130,4 +129,5 @@ async def clear_queue():
     if status['playlistlength'] == 0:
         return {'status_code': '200', 'detail': 'Cleared playlist'}
     else:
-        return {'status_code': 'Error', 'detail': 'Couldn\'t clear playlist'}
+        raise HTTPException(status_code=406,
+                    detail= 'Couldn\'t clear playlist')

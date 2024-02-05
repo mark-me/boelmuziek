@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from dotenv import dotenv_values
 
 from pydantic import BaseModel
@@ -66,8 +66,8 @@ async def delete_file_from_playlist(name_playlist: str, position: int):
         playlist = await mpd.get_playlist(name_playlist)
         return playlist
     else:
-        return {'status_code': 406,
-                'detail': f"Couldn't remove song at position {position} from playlist '{name_playlist}'"}
+        raise HTTPException(status_code=406,
+                    detail=f"Couldn't remove song at position {position} from playlist '{name_playlist}'")
 
 @router.get("/queue-to-playlist/")
 async def save_queue_as_playlist(name_playlist: str):

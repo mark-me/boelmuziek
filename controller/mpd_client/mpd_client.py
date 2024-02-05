@@ -233,6 +233,8 @@ class MPDController(object):
 
     async def get_album_cover(self, name_artist: str, name_album: str):
         album = await self.get_album(name_artist=name_artist, name_album=name_album)
+        if album is None:
+            return None
         file = album['files'][0]['file']
         cover_art = await self.get_cover_art(uri=file)
         return cover_art
@@ -417,7 +419,10 @@ class MPDController(object):
         lst_artist_albums = self.__type_library(lst_artist_albums)
         lst_artist_albums = self.__rename_song_dict_keys(lst_artist_albums)
         lst_artist_albums = self.__nest_album(lst_artist_albums)
-        album_dict = [album_dict for album_dict in lst_artist_albums if album_dict['album'] == name_album][0]
+        try:
+            album_dict = [album_dict for album_dict in lst_artist_albums if album_dict['album'] == name_album][0]
+        except IndexError as e:
+            return None
         return album_dict
 
     async def search(self, type: str, filter:str):
