@@ -231,6 +231,12 @@ class MPDController(object):
         image_format = self.__determine_image_format(image_bytes)
         return {'image_format': image_format, 'image': image_bytes}
 
+    async def get_album_cover(self, name_artist: str, name_album: str):
+        album = await self.get_album(name_artist=name_artist, name_album=name_album)
+        file = album['files'][0]['file']
+        cover_art = await self.get_cover_art(uri=file)
+        return cover_art
+
     async def get_status(self) -> dict:
         """MPD server status
 
@@ -403,6 +409,16 @@ class MPDController(object):
         lst_query_results = self.__rename_song_dict_keys(lst_query_results)
         lst_query_results = self.__nest_album(lst_query_results)
         return lst_query_results
+
+    async def get_album(self, name_artist: str, name_album: str):
+        await self.connect()
+        lst_artist_albums = []
+        lst_artist_albums = await self.mpd_client.find('artist', name_artist) #, 'album', name_artist)
+        lst_artist_albums = self.__type_library(lst_artist_albums)
+        lst_artist_albums = self.__rename_song_dict_keys(lst_artist_albums)
+        lst_artist_albums = self.__nest_album(lst_artist_albums)
+        album_dict = [album_dict for album_dict in lst_artist_albums if album_dict['album'] == name_album][0]
+        return album_dict
 
     async def search(self, type: str, filter:str):
         """ Searches for artists, albums or songs.

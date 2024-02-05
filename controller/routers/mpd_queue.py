@@ -83,7 +83,7 @@ async def seek_position_in_current_song(time_seconds: str):
 @router.get("/play-song/")
 async def start_playing_from_queue(position: int=0):
     """
-    Start playing a file from the queue
+    Start playing a file from the playback queue
 
     - **position**: The position of the file to start playback. The position is 0 based.
     """
@@ -98,7 +98,7 @@ async def start_playing_from_queue(position: int=0):
 
 @router.get("/current-cover/")
 async def get_current_song_cover():
-    """Retrieve the cover art of the currently playing file.
+    """ Retrieve the cover art of the currently playing file.
     """
     current_song = await mpd.current_song()
     dict_image = await mpd.get_cover_art(current_song['file'])
@@ -123,7 +123,7 @@ async def move_queue_items(start: int, end: int, to: int):
 
 @router.get("/clear/")
 async def clear_queue():
-    """Clear the queue
+    """Clear the playback queue
     """
     await mpd.queue_clear()
     status = await mpd.get_status()
