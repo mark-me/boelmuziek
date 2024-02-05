@@ -15,7 +15,7 @@ Now the user credentials are stored (and are not asked for next time) and artist
 
 ## Examples for POST bodies
 
-### /playlist/add
+### /queue/add
 
 ```json
 {
@@ -33,7 +33,7 @@ Now the user credentials are stored (and are not asked for next time) and artist
 }
 ```
 
-### /playlist/move
+### /queue/move
 
 ```json
 {
@@ -41,6 +41,35 @@ Now the user credentials are stored (and are not asked for next time) and artist
     "end_postion": 2,
     "new_position": 5
 }
+```
+
+### /queue/add
+
+```json
+{
+    "files": [
+    {
+        "file": "Compilations/Rogue's Gallery_ Pirate Ballads, Sea Songs, & Chanteys/04 Fire Down Below.mp3"
+    },
+    {
+        "file": "Compilations/Rogue's Gallery_ Pirate Ballads, Sea Songs, & Chanteys/27 Pinery Boy.mp3"
+    }
+    ]
+}
+
+```
+
+### /playlists/add-file
+
+```json
+{
+  "name_playlist": "My playlist",
+  "files": [
+    "Compilations/Rogue's Gallery_ Pirate Ballads, Sea Songs, & Chanteys/04 Fire Down Below.mp3",
+    "Compilations/Rogue's Gallery_ Pirate Ballads, Sea Songs, & Chanteys/27 Pinery Boy.mp3"
+  ]
+}
+
 ```
 
 ### Structure of project

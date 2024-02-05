@@ -9,7 +9,7 @@ import uvicorn
 from dotenv import dotenv_values
 
 from mpd_client import *
-from routers import mpd_system, mpd_library, snapserver, discogs, lastfm
+from routers import mpd_system, mpd_library, mpd_queue, mpd_playlists, snapserver, discogs, lastfm
 
 config = {
     **dotenv_values(".env"),  # load shared development variables
@@ -22,6 +22,7 @@ app = FastAPI()
 app.include_router(mpd_system.router)
 app.include_router(mpd_queue.router)
 app.include_router(mpd_library.router)
+app.include_router(mpd_playlists.router)
 app.include_router(snapserver.router)
 app.include_router(lastfm.router)
 app.include_router(discogs.router)

@@ -91,11 +91,11 @@ class MPDController(object):
         await self.connect()
         await self.mpd_client.seekcur(time_seconds)
 
-    async def play_on_playlist(self, position: int) -> bool:
-        """Begins playing the playlist at song at _position
+    async def play_on_queue(self, position: int) -> bool:
+        """Begins playing the queue at song at _position
 
         Args:
-            position (int): _The position of a song in the playlist_
+            position (int): The position of a song in the queue
 
         Returns:
             bool: Success of play selection
@@ -109,7 +109,7 @@ class MPDController(object):
                 logger.info(f"Selected a song at position {position} to start playing.")
                 return True
             else:
-                logger.error(f"Selected a song at position {position} which is larger than the number of songs in the playlist {qty_songs_playlist}")
+                logger.error(f"Selected a song at position {position} which is larger than the number of songs in the queue {qty_songs_playlist}")
         else:
             logger.error("Could not retrieve the status of MPD.")
         return False
@@ -274,7 +274,7 @@ class MPDController(object):
             dict_stats['db_update'] = datetime.fromtimestamp(int(dict_stats['db_update']))
         return(dict_stats)
 
-    async def queue(self) -> list:
+    async def get_queue(self) -> list:
         """ Current playlist
 
         :return: List of dictionaries, with the song information and the information about it's position in the playlist
@@ -327,7 +327,7 @@ class MPDController(object):
 
     async def queue_move(self, start: int, end: int, to: int):
         await self.mpd_client.move(1,7)
-        playlist = await self.queue()
+        playlist = await self.get_queue()
         return playlist
 
     async def queue_add_file(self, file: str, position: int, start_playing: bool, clear: bool=False):
@@ -349,7 +349,7 @@ class MPDController(object):
         await self.mpd_client.addid(file, position)
         if start_playing:
             await self.mpd_client.play(position)
-        playlist = await self.queue()
+        playlist = await self.get_queue()
         return playlist
 
     async def queue_clear(self):
@@ -424,13 +424,62 @@ class MPDController(object):
 
         # Nest files if artists or albums are searched
         if(type == 'artist'):
-            self.list_query_results = self.__nest_artist_album(list_query_results)
+            list_query_results = self.__nest_artist_album(list_query_results)
         elif(type == 'album'):
-            self.list_query_results = self.__nest_album(list_query_results)
+            list_query_results = self.__nest_album(list_query_results)
         else:
-            self.list_query_results = list_query_results
+            list_query_results = list_query_results
 
-        return self.list_query_results
+        return list_query_results
+
+    async def get_playlists(self)-> list:
+        await self.connect()
+        lst_playlist = await self.mpd_client.listplaylists()
+        return lst_playlist
+
+    async def get_playlist(self, name_playlist: str):
+        await self.connect()
+        playlist_info = await self.mpd_client.listplaylistinfo(name_playlist)
+        playlist_info = self.__rename_song_dict_keys(playlist_info)
+        playlist_info = self.__type_library(playlist_info)
+        return playlist_info
+
+    async def playlist_add_file(self, name_playlist: str, file: str):
+        await self.connect()
+        await self.mpd_client.playlistadd(name_playlist, file)
+
+    async def queue_to_playlist(self, name_playlist: str):
+        await self.connect()
+        await self.mpd_client.save(name_playlist)
+
+    async def playlist_delete_song(self, name_playlist: str, position: int):
+        await self.connect()
+        playlist = await self.mpd_client.listplaylistinfo(name_playlist)
+        qty_songs = len(playlist)
+        if position < 0 or position >= qty_songs:
+            return False
+        else:
+            await self.mpd_client.playlistdelete(name_playlist, position)
+            return True
+
+    async def playlist_enqueue(self, name_playlist: str, start_playing: bool=False) -> None:
+        await self.connect()
+        if start_playing:
+            status = await self.get_status()
+        await self.mpd_client.load(name_playlist)
+        if start_playing:
+            await self.play_on_queue(position=status['playlistlength'])
+        play_queue = await self.get_queue(name_playlist=name_playlist)
+        return play_queue
+
+    async def playlist_delete(self, name_playlist: str):
+        await self.connect()
+        self.mpd_client.rm(name_playlist)
+
+    async def playlist_rename(self, name_playlist: str, name_new: str):
+        await self.connect()
+        self.mpd_client.rename(name_playlist, name_new)
+
 
     def __rename_song_dict_keys(self, data):
         """

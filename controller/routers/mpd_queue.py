@@ -40,8 +40,8 @@ class QueueItems(BaseModel):
 
 @router.get("/")
 async def get_queue():
-    current_playlist = await mpd.queue()
-    return current_playlist
+    queue = await mpd.get_queue()
+    return queue
 
 @router.post("/add/")
 async def add_to_queue(items: QueueItems):
@@ -49,10 +49,10 @@ async def add_to_queue(items: QueueItems):
     first_round = True
     for item in items.files:
         first_round = items.start_playing and first_round
-        lst_playlist = await mpd.queue_add_file(item.file, position=position, start_playing=first_round)
+        lst_queue = await mpd.queue_add_file(item.file, position=position, start_playing=first_round)
         position = position + 1
         first_round = False
-    return lst_playlist
+    return lst_queue
 
 @router.get("/current-song/")
 async def get_current_song():
