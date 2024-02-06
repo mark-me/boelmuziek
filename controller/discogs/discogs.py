@@ -43,6 +43,7 @@ class Discogs:
         if result is not None:
             logger.info("Found user token in config file config/secrets.yml")
             self.discogsclient.set_token(token=result['token'], secret=result['secret'])
+            return True
         else:
             logger.warning("No user token found, user needs to authenticate the app use on Discogs")
             return False
