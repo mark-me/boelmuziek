@@ -115,7 +115,7 @@ class Discogs:
     def get_album(self, name_artist:str, name_album: str) -> dict:
         try:
             logger.info(f"Fetching album information of {name_artist}-{name_album}.")
-            albums = self.discogsclient.search(f"{name_artist} - {name_album}", type='release')
+            albums = self.discogsclient.search(f"{name_artist} - {name_album}", type='master')
         except HTTPError as e:
             if e.status_code == 429:
                 time.sleep(60)
@@ -125,16 +125,13 @@ class Discogs:
             logger.error(msg)
             dict_result = None
         else:
-            album = albums[0]
+            album = albums._pages[1][0]
+            print(album)
             dict_result = {
                 'id': album.id,
-                'name': album.name,
-                'name_variations': album.name_variations,
-                'name_real': album.real_name,
-                'images': album.images,
-                'members': album.members,
+                'name_album': album.title,
                 'url_discogs': album.url,
-                'urls_other': album.urls
+                'year': album.data['year']
             }
         return dict_result
 
