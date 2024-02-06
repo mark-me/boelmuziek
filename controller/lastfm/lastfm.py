@@ -38,8 +38,7 @@ class LastFm:
         if result is not None:
             logger.info("Found username and session_key in config file config/secrets.yml")
             self._network.session_key = self._session_key = result['session_key']
-            #self._network.username =
-            self._username = result['username']
+            self._network.username = self._username = result['username']
         else:
             logger.warning("No entry found of username and session_key in config file config/secrets.yml")
             self._session_key :str = None
@@ -119,6 +118,38 @@ class LastFm:
         except pylast.WSError as e:
             logger.error(f"Failed to set love for \'{name_artist}-{name_song}\' due to authorization issues, re-authenticate.")
             return False
+
+    def get_loved_track(self, limit=1000) -> list:
+        logger.info(f"Get {self._network.username}'s loved tracks")
+        user = self._network.get_authenticated_user()
+        lst_tracks = user.get_loved_tracks(limit=limit)
+        lst_loved_tracks = []
+        for track in lst_tracks:
+            lst_loved_tracks.append(
+                {
+                    'datetime': track.date,
+                    'timestamp': track.timestamp,
+                    'song': track.track.title,
+                    'artist': track.track.artist.name
+                }
+            )
+        return lst_loved_tracks
+
+    def get_loved_tracks(self, limit=1000) -> list:
+        logger.info(f"Get {self._network.username}'s loved tracks")
+        user = self._network.get_authenticated_user()
+        lst_tracks = user.get_loved_tracks(limit=limit)
+        lst_loved_tracks = []
+        for track in lst_tracks:
+            lst_loved_tracks.append(
+                {
+                    'datetime': track.date,
+                    'timestamp': track.timestamp,
+                    'song': track.track.title,
+                    'artist': track.track.artist.name
+                }
+            )
+        return lst_loved_tracks
 
     def get_top_albums(self, period: str='overall', page: int=1) -> dict:
         user = self._network.get_user(username=self._username)

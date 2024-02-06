@@ -58,7 +58,7 @@ async def get_artist_bio(name_artist: str):
         raise HTTPException(status_code=401,detail="App not authorized for last.fm or invalid user token")
     return result
 
-@router.get("/love/")
+@router.get("/love-song/")
 async def love_track(name_artist: str, name_song: str):
     """ Setting 'loved' for a song on Last.fm
 
@@ -70,6 +70,12 @@ async def love_track(name_artist: str, name_song: str):
         return { 'details': f"Loved '{name_song}' by {name_artist}"}
     else:
         HTTPException(500, "Either network or authorization issue")
+
+@router.get("/loved/")
+async def get_loved_songs(limit: int=1000):
+    lst_songs = lastfm.get_loved_tracks(limit=limit)
+    return lst_songs
+
 
 """ @router.get("/albums/top")
 async def get_most_played_albums():
