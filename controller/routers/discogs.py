@@ -31,7 +31,7 @@ async def check_user_credentials():
     if discogs.check_user_tokens():
         return{'description': 'All OK!'}
     else:
-        raise HTTPException(status_code=401, detail='Let user re-authorize access to Last.fm account')
+        raise HTTPException(status_code=401, detail='Let user (re-)authorize access to her/his Discogs account')
 
 @router.get("/get-user-access/")
 async def open_discogs_permissions_page():

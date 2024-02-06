@@ -56,7 +56,7 @@ def main():
     mpd_client = MPDController(host=config['HOST_MPD'])
 
     is_first_pass = True
-    while not lastfm.check_user_token():
+    while not lastfm.check_user_data():
         if is_first_pass:
             logger.error("Not authenticated with Last.fm. Use API to login.")
             is_first_pass = False
