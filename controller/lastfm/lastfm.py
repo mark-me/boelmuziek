@@ -119,22 +119,6 @@ class LastFm:
             logger.error(f"Failed to set love for \'{name_artist}-{name_song}\' due to authorization issues, re-authenticate.")
             return False
 
-    def get_loved_track(self, limit=1000) -> list:
-        logger.info(f"Get {self._network.username}'s loved tracks")
-        user = self._network.get_authenticated_user()
-        lst_tracks = user.get_loved_tracks(limit=limit)
-        lst_loved_tracks = []
-        for track in lst_tracks:
-            lst_loved_tracks.append(
-                {
-                    'datetime': track.date,
-                    'timestamp': track.timestamp,
-                    'song': track.track.title,
-                    'artist': track.track.artist.name
-                }
-            )
-        return lst_loved_tracks
-
     def get_loved_tracks(self, limit=1000) -> list:
         logger.info(f"Get {self._network.username}'s loved tracks")
         user = self._network.get_authenticated_user()
