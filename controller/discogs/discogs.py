@@ -1,9 +1,10 @@
 import discogs_client
 from discogs_client.exceptions import HTTPError
 
+import logging
+import os
 from pathlib import Path
 import time
-import logging
 
 from utils import SecretsYAML
 
@@ -78,7 +79,13 @@ class Discogs:
         return { 'status_code': 200, 'message': f"User {user.username} connected."}
 
     def get_artist_image(self, name_artist: str) -> dict:
-        path_image = f"artist_images/{name_artist}.jpg"
+
+        path_cache = "artist_images"
+        path_image = f"{path_cache}/{name_artist}.jpg" # File image cache
+
+        # Create artist image cach directory if not exists
+        if not os.path.exists(path_cache):
+            os.makedirs(path_cache)
 
         # Load cached image
         if Path(path_image).is_file():
