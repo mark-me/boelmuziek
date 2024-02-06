@@ -416,8 +416,8 @@ class MPDController(object):
         await self.connect()
         lst_artist_albums = []
         lst_artist_albums = await self.mpd_client.find('artist', name_artist) #, 'album', name_artist)
-        lst_artist_albums = self.__type_library(lst_artist_albums)
         lst_artist_albums = self.__rename_song_dict_keys(lst_artist_albums)
+        lst_artist_albums = self.__type_library(lst_artist_albums)
         lst_artist_albums = self.__nest_album(lst_artist_albums)
         try:
             album_dict = [album_dict for album_dict in lst_artist_albums if album_dict['album'] == name_album][0]
@@ -561,21 +561,30 @@ class MPDController(object):
         """
         lst_key_int = ['track', 'disc', 'time']
         lst_key_datetime = ['last-modified']
-        #lst_date = ['date'] #, 'originaldate']
         lst_float = ['duration']
 
         for key in lst_key_int:
             if key in data.keys():
-                data[key] = int(data[key])
+                logger.info(f"Converting {key} of {data['file']} to int.")
+                try:
+                    data[key] = int(data[key])
+                except TypeError as e:
+                    logger.error(f"Could not convert {key} of {data['file']} to int.")
+
         for key in lst_key_datetime:
             if key in data.keys():
-                data[key] =  parser.parse(data[key])
-        # for key in lst_date:
-        #     if key in data.keys():
-        #         data[key] = datetime.strptime(data[key], '%Y-%m-%d').date()
+                logger.info(f"Converting {key} of {data['file']} to datetime.")
+                try:
+                    data[key] =  parser.parse(data[key])
+                except TypeError as e:
+                    logger.error(f"Could not convert {key} of {data['file']} to datetime.")
         for key in lst_float:
             if key in data.keys():
-                data[key] = float(data[key])
+                logger.info(f"Converting {key} of {data['file']} to float.")
+                try:
+                    data[key] = float(data[key])
+                except TypeError as e:
+                    logger.error(f"Could not convert {key} of {data['file']} to float.")
         return data
 
     def __nest_artist_album(self, list_dict_files):
