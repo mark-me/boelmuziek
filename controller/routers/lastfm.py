@@ -6,7 +6,6 @@ from enum import Enum
 import os
 
 from lastfm import LastFm
-from mpd_client import MPDController
 
 config = {
     **dotenv_values(".env"),  # load shared development variables
