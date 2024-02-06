@@ -79,11 +79,20 @@ async def love_track(name_artist: str, name_song: str):
 
 @router.get("/loved/")
 async def get_loved_songs(limit: int=1000):
+    """  Retrieving loved songs
+
+    - **limit**: The number of assets you want to retrieve, max = 1000
+    """
     lst_songs = lastfm.get_loved_tracks(limit=limit)
     return lst_songs
 
 @router.get("/top-assets/")
 async def get_top_assets(type_asset: TypeAsset, limit: int=1000):
+    """ Retrieving top scrobbled media assets on Last.fm
+
+    - **type_asset**: Type of assets you want to aggregate your scrobbles to
+    - **limit**: The number of assets you want to retrieve, max = 1000
+    """
     lst_results = lastfm.get_top_assets(type_asset=type_asset.value,
                                         limit=limit)
     return lst_results
