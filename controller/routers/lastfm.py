@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from dotenv import dotenv_values
 import pandas as pd
 
+from enum import Enum
 import os
 
 from lastfm import LastFm
@@ -18,6 +19,11 @@ router = APIRouter(
     prefix='/lastfm',
     tags=['Last.fm resources']
 )
+
+class TypeAsset(str, Enum):
+    artist = "artists"
+    album = "albums"
+    song = "songs"
 
 @router.get("/check-credentials/")
 async def check_user_credentials():
@@ -76,6 +82,11 @@ async def get_loved_songs(limit: int=1000):
     lst_songs = lastfm.get_loved_tracks(limit=limit)
     return lst_songs
 
+@router.get("/top-assets/")
+async def get_top_assets(type_asset: TypeAsset, limit: int=1000):
+    lst_results = lastfm.get_top_assets(type_asset=type_asset.value,
+                                        limit=limit)
+    return lst_results
 
 """ @router.get("/albums/top")
 async def get_most_played_albums():

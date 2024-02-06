@@ -120,7 +120,7 @@ class LastFm:
             logger.error(f"Failed to set love for \'{name_artist}-{name_song}\' due to authorization issues, re-authenticate.")
             return False
 
-    def get_loved_tracks(self, limit=1000) -> list:
+    def get_loved_tracks(self, limit: int) -> list:
         logger.info(f"Get {self._network.username}'s loved tracks")
         user = self._network.get_authenticated_user()
         lst_tracks = user.get_loved_tracks(limit=limit)
@@ -136,17 +136,33 @@ class LastFm:
             )
         return lst_loved_tracks
 
-    def get_top_albums(self, period: str='overall', page: int=1) -> dict:
+    def get_top_assets(self, type_asset: str, limit: int) -> dict:
         user = self._network.get_user(username=self._username)
-        lst_albums = []
+        lst_results = []
         try:
-            top_items = user.get_top_albums()
+            if type_asset == 'artists':
+                top_items = user.get_top_artists(limit=limit)
+            elif type_asset == 'albums':
+                top_items = user.get_top_albums(limit=limit)
+            elif type_asset == 'songs':
+                top_items = user.get_top_tracks(limit=limit)
         except pylast.NetworkError as e:
             logger.error(f"Failed to get Top Albums because of {e}")
         for top_item in top_items:
-            lst_albums.append({'name_artist': top_item.item.artist.name, 'name_album': top_item.item.title, 'qty_plays': top_item.weight})
+            if type_asset == 'artists':
+                dict_top_item = {'name_artist': top_item.item.name,
+                                 'qty_plays': int(top_item.weight)}
+            elif type_asset == 'albums':
+                dict_top_item = {'name_artist': top_item.item.artist.name,
+                                 'name_album': top_item.item.title,
+                                 'qty_plays': int(top_item.weight)}
+            elif type_asset == 'songs':
+                dict_top_item = {'name_artist': top_item.item.artist.name,
+                                 'name_song': top_item.item.title,
+                                 'qty_plays': int(top_item.weight)}
+            lst_results.append(dict_top_item)
+        return lst_results
 
-        return lst_albums
 
 
 
