@@ -1,5 +1,6 @@
 import pylast
 from dotenv import dotenv_values
+from dateutil import parser
 
 import logging
 import os
@@ -127,8 +128,8 @@ class LastFm:
         for track in lst_tracks:
             lst_loved_tracks.append(
                 {
-                    'datetime': track.date,
-                    'timestamp': track.timestamp,
+                    'datetime': parser.parse(track.date),
+                    'timestamp': int(track.timestamp),
                     'song': track.track.title,
                     'artist': track.track.artist.name
                 }
