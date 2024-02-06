@@ -29,6 +29,13 @@ class Discogs:
                                                    consumer_key=self._consumer_key,
                                                    consumer_secret=self._consumer_secret)
         self.check_user_tokens()
+        self.set_path_artist_images()
+
+    def set_path_artist_images(self):
+        self._path_artist_cache = "artist_images"
+                # Create artist image cache directory if not exists
+        if not os.path.exists(self._path_artist_cache):
+            os.makedirs(self._path_artist_cache)
 
     @property
     def user_token(self):
@@ -79,53 +86,123 @@ class Discogs:
         logger.info(f"Connected and written user credentials of {user.name}.")
         return { 'status_code': 200, 'message': f"User {user.username} connected."}
 
-    def get_artist_image(self, name_artist: str) -> dict:
-
-        path_cache = "artist_images"
-        path_image = f"{path_cache}/{name_artist}.jpg" # File image cache
-
-        # Create artist image cach directory if not exists
-        if not os.path.exists(path_cache):
-            os.makedirs(path_cache)
-
-        # Load cached image
-        if Path(path_image).is_file():
-            logger.info(f"Loading art of {name_artist} from cache.")
-            with open(path_image, 'rb') as file:
-                content = file.read()
-            return {'status': 200,
-                    'message': content}
-
-        # Fetch image from discogs
+    def get_artist(self, name_artist: str) -> dict:
         try:
-            search_results = self.discogsclient.search(name_artist, type='artist')
-            logger.info(f"Fetching art of {name_artist} Discogs.")
+            logger.info(f"Fetching artist information of {name_artist}.")
+            artists = self.discogsclient.search(name_artist, type='artist')
         except HTTPError as e:
             if e.status_code == 429:
                 time.sleep(60)
 
-        if search_results == None:
-            logger.error(f"Artist not found: {name_artist}")
-            return{'status_code': 404,
-                   'detail': f"Artist not found: {name_artist}"}
+        if artists == None:
+            msg = f"Artist not found: {name_artist}"
+            logger.error(msg)
+            dict_result = None
         else:
+            artist = artists[0]
+            dict_result = {
+                'id': artist.id,
+                'name': artist.name,
+                'name_variations': artist.name_variations,
+                'name_real': artist.real_name,
+                'images': artist.images,
+                'members': artist.members,
+                'url_discogs': artist.url,
+                'urls_other': artist.urls
+            }
+        return dict_result
+
+    def get_album(self, name_artist:str, name_album: str) -> dict:
+        try:
+            logger.info(f"Fetching album information of {name_artist}-{name_album}.")
+            albums = self.discogsclient.search(f"{name_artist} - {name_album}", type='release')
+        except HTTPError as e:
+            if e.status_code == 429:
+                time.sleep(60)
+
+        if albums == None:
+            msg = f"Album not found: {name_album}"
+            logger.error(msg)
+            dict_result = None
+        else:
+            album = albums[0]
+            dict_result = {
+                'id': album.id,
+                'name': album.name,
+                'name_variations': album.name_variations,
+                'name_real': album.real_name,
+                'images': album.images,
+                'members': album.members,
+                'url_discogs': album.url,
+                'urls_other': album.urls
+            }
+        return dict_result
+
+
+    def _save_artist_image_cache(self, name_artist: str, image: bytes):
+        """Save an image to the cache directory
+
+        Args:
+            name_artist (str): Name of the artist
+            image (bytes): Artist image binary
+        """
+        path_image = f"{self._path_artist_cache}/{name_artist}.jpg"
+        with open(path_image, "wb") as file:
+            file.write(image)
+        logger.info(f"Artist image saved for: {name_artist}")
+
+    def _get_artist_image_cached(self, name_artist: str) -> bytes:
+        """Reading an cached artist image
+
+        Args:
+            name_artist (str): Name of the artist
+
+        Returns:
+            bytes: Artist image
+        """
+        path_image = f"{self._path_artist_cache}/{name_artist}.jpg" # File image cache
+        if Path(path_image).is_file():
+            logger.info(f"Loading art of {name_artist} from cache.")
+            with open(path_image, 'rb') as file:
+                image = file.read()
+            return image
+        else:
+            return None
+
+    def get_artist_image(self, name_artist: str) -> dict:
+        """Retrieve an artist image
+
+        Args:
+            name_artist (str): Name of the artist
+
+        Returns:
+            dict: Dictionary with the retrieval status and image (or error message)
+        """
+        image = self._get_artist_image_cached(name_artist=name_artist)
+        if image is not None:
+            return {'status_code': 200, 'message': image}
+
+        # Fetch image from discogs
+        artist_data = self.get_artist(name_artist=name_artist)
+        if artist_data is not None:
             try:
-                image = search_results[0].images[0]['uri']
-                content, resp = self.discogsclient._fetcher.fetch(None, 'GET', image,
+                image_url = artist_data['images'][0]['uri']
+                image, resp = self.discogsclient._fetcher.fetch(None, 'GET', image_url,
                                                                   headers={'User-agent': self.user_agent})
                 # Write artist image to cache
-                with open(path_image, "wb") as file:
-                    file.write(content)
-                logger.info(f"Artist image found and saved for: {name_artist}")
+                self._save_artist_image_cache(name_artist=name_artist, image=image)
             except (TypeError, IndexError):
-                logger.error(f"No artist image found for: {name_artist}")
-                return {'status_code': 404,
-                        'detail': f"No artist image found : {name_artist}"}
+                msg = f"No artist image found for: {name_artist}"
+                logger.error(msg)
+                return {'status_code': 404, 'detail': msg}
             except HTTPError as e:
                 if e.status_code == 429:
                     time.sleep(60)
-            return {'status': resp,
-                    'message': content}
+            return {'status_code': resp,
+                    'message': image}
+        else:
+            return{'status_code': 404, 'detail': msg}
+
 
     def artist_images_bulk(self, list_artists: list) -> None:
         for artist in list_artists:
