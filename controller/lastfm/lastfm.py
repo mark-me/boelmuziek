@@ -27,8 +27,8 @@ class LastFm:
             app='lastfm',
             expected_keys=set(self._secrets.keys())
             )
-        self._api_key = 'bd357ecfcaa0085f4948c273729f44f4'
-        self._api_secret = 'a94e6fe1fa2f28ec81537b05e2333b95'
+        self._api_key = '2e031e7b2ab98c1bce14436016185a4d'
+        self._api_secret = 'fcce22fac65bcdcfcc249841f4ffed8b'
         self._network = pylast.LastFMNetwork(api_key=self._api_key,
                                              api_secret=self._api_secret)
         self.check_user_data()
@@ -47,7 +47,7 @@ class LastFm:
             return False
         return True
 
-    def request_user_access(self, callback_url: str=None) -> dict:
+    def request_user_access(self, username: str, callback_url: str=None) -> dict:
         """ Prompt your user to "accept" the terms of your application. The application
             will act on behalf of their discogs.com account."""
         skg = pylast.SessionKeyGenerator(self._network)
@@ -59,9 +59,9 @@ class LastFm:
                 break
             except pylast.WSError:
                 time.sleep(1)
-        self._secrets['session_key'] = session_key
+        self._network.session_key = self._secrets['session_key'] = session_key
+        self._network.username = self._secrets['username'] = username
         self._user_secrets_file.write_secrets(dict_secrets=self._secrets)
-        self._network.session_key = session_key
         return {'key': session_key}
 
     # def request_user_access(self, username: str ,callback_url: str=None) -> dict:
