@@ -21,6 +21,8 @@ router = APIRouter(
 
 @router.get("/check-credentials/")
 async def check_user_credentials():
+    """ Check if the user already has given the app access to Last.fm
+    """
     if lastfm.check_user_token():
         return{'description': 'All OK!'}
     else:
@@ -28,25 +30,39 @@ async def check_user_credentials():
 
 @router.get("/get-user-access/")
 async def open_lastfm_permissions_page():
-    result = lastfm.request_user_access(callback_url=f"http://localhost:{config['PORT_CONTROLLER']}/lastfm/receive-token")
+    """ Launching the Last.fm webpage to request access. Once granted the callback url is used for verification.
+    """
+    callback_url=f"http://localhost:{config['PORT_CONTROLLER']}/lastfm/receive-token"
+    result = lastfm.request_user_access(callback_url=callback_url)
     return result
 
 @router.get("/receive-token/")
 async def accept_user_token(token: str):
+    """ Callback function used for the authentication process
+    """
     result = lastfm.save_user_token(token)
     return result
 
 @router.get("/artist/")
 async def get_artist_bio(name_artist: str):
+    """ Retrieving the artist bio
+
+    - **name_artist** - The artist's name (surprise, surprise)
+    """
     result = lastfm.get_artist_bio(name_artist)
     return result
 
 @router.get("/love/")
 async def love_track(name_artist: str, name_song: str):
+    """ Setting 'loved' for a song on Last.fm
+
+    - **name_artist**: Name of artist
+    - **name_song**: Name of the song to set to 'loved'
+    """
     lastfm.love_track(name_artist=name_artist, name_song=name_song)
     return { 'details': f"Loved '{name_song}' by {name_artist}"}
 
-@router.get("/albums/top")
+""" @router.get("/albums/top")
 async def get_most_played_albums():
     lastfm_albums = lastfm.get_top_albums()
     df_lastfm = pd.DataFrame(lastfm_albums)
@@ -70,4 +86,4 @@ async def get_most_played_albums():
     df_mpd.columns = ['name_artist', 'name_album', 'qty_plays']
     df_mpd['qty_plays'] = df_mpd['qty_plays'].str
 
-    return df_mpd.to_dict('records')
+    return df_mpd.to_dict('records') """
