@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from dotenv import dotenv_values
 import pandas as pd
 
@@ -34,23 +34,17 @@ async def check_user_credentials():
         raise HTTPException(status_code=401, detail='Let user (re-)authorize access to her/his Last.fm account')
 
 @router.get("/get-user-access/")
-async def open_lastfm_permissions_page(username: str):
+async def open_lastfm_permissions_page(username: str, background_tasks: BackgroundTasks):
     """ Launching the Last.fm webpage to request access. Once granted the callback url is used for verification.
 
     - **username**, not strictly necessary for the authorization process, but aids user statistics retrieval
     """
-    callback_url=f"http://localhost:{config['PORT_CONTROLLER']}/lastfm/receive-session-key"
-    #result = lastfm.request_user_access(username=username, callback_url=callback_url)
-    result = lastfm.request_user_access(callback_url=callback_url, username=username)
+    result = lastfm.request_user_access(username=username)
+    background_tasks.add_task(wait_authorization, result['url'])
     return result
 
-@router.get("/receive-session-key/")
-async def receive_session_key(token: str):
-    """ Callback function used for the authentication process
-    """
-    print(token)
-    result = lastfm.save_session_key(session_key=token)
-    return result
+def wait_authorization(url: str):
+    lastfm.await_authorization(url)
 
 @router.get("/artist/")
 async def get_artist_bio(name_artist: str):
@@ -121,3 +115,4 @@ async def get_most_played_albums():
     df_mpd['qty_plays'] = df_mpd['qty_plays'].str
 
     return df_mpd.to_dict('records') """
+

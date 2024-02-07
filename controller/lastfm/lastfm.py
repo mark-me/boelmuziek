@@ -32,6 +32,7 @@ class LastFm:
         self._api_secret = 'fcce22fac65bcdcfcc249841f4ffed8b'
         self._network = pylast.LastFMNetwork(api_key=self._api_key,
                                              api_secret=self._api_secret)
+        self._session_key_gen = pylast.SessionKeyGenerator(self._network)
         self.check_user_data()
 
     def check_user_data(self):
@@ -47,32 +48,25 @@ class LastFm:
             return False
         return True
 
-    def request_user_access(self, username: str, callback_url: str=None) -> dict:
+    def request_user_access(self, username: str) -> dict:
         """ Prompt your user to "accept" the terms of your application. The application
             will act on behalf of their discogs.com account."""
-        skg = pylast.SessionKeyGenerator(self._network)
-        url = skg.get_web_auth_url()
-        webbrowser.open(url)
+        self._username = username
+        url = self._session_key_gen.get_web_auth_url()
+        return {'message': 'Authorize BoelMuziek for access to your Last.fm account :',
+                'url': url}
+
+    def await_authorization(self, url):
         while True:
             try:
-                session_key = skg.get_web_auth_session_key(url)
+                session_key = self._session_key_gen.get_web_auth_session_key(url)
                 break
             except pylast.WSError:
                 time.sleep(1)
         self._network.session_key = self._secrets['session_key'] = session_key
-        self._network.username = self._secrets['username'] = username
+        self._network.username = self._secrets['username'] = self._username
         self._user_secrets_file.write_secrets(dict_secrets=self._secrets)
         return {'key': session_key}
-
-    # def request_user_access(self, username: str ,callback_url: str=None) -> dict:
-    #     """ Prompt your user to "accept" the terms of your application. The application
-    #         will act on behalf of their discogs.com account."""
-    #     self._secrets['username'] = username
-    #     # self._network.username = username
-    #     logger.info(f"Requesting the user access to her/his Last.fm account with callback_url {callback_url}")
-    #     url = f"http://www.last.fm/api/auth/?api_key={self._api_key}&cb={callback_url}"
-    #     return {'message': 'Authorize BoelMuziek for access to your Last.fm account :',
-    #             'url': url}
 
     def save_session_key(self, session_key: str, username: str) -> dict:
         logger.info("Receiving confirmation of access to the user\'s Last.fm account")

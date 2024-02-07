@@ -14,6 +14,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# TODO: Wait until there are valid secret keys
+
 async def loop_scrobble(lastfm: LastFm, mpd_client: MPDController) -> None:
     """A loop for scrobbling
 
