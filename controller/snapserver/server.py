@@ -13,8 +13,8 @@ class SnapServer():
     def __init__(self, host) -> None:
         self.host = host
         self.loop = asyncio.get_event_loop() # Loop needed for snapserver
-        # asyncio.run(self.connect())
-        self.server = self.loop.run_until_complete(control.create_server(self.loop, self.host))
+        #self.server = self.loop.run_until_complete(control.create_server(self.loop, self.host))
+        self.server = control.create_server(self.loop, self.host)
 
     async def list_clients(self):
        # print all client names
@@ -69,18 +69,3 @@ class SnapServer():
     async def group_mute(self, id_group: str) -> bool:
         await self.server.group_mute(identifier=id_group, status='false')
 
-
-async def main(loop):
-    snapserver = SnapServer(host=config['HOST_SNAPSERVER'])
-    clients = await snapserver.list_clients()
-    for client in clients:
-        print(client)
-    groups = await snapserver.list_groups()
-    for group in groups:
-        type(group)
-        print(group)
-
-if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(loop))
-    loop.close()
