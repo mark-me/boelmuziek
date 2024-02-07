@@ -120,6 +120,11 @@ async def move_queue_items(start: int, end: int, to: int):
     playlist = await mpd.queue_move(start=start, end=end, to=to)
     return playlist
 
+@router.get("/delete/")
+async def delete_queue_items(start: int, end: int):
+    playlist = await mpd.queue_delete(start=start, end=end)
+    return playlist
+
 @router.get("/clear/")
 async def clear_queue():
     """Clear the playback queue

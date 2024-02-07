@@ -333,8 +333,15 @@ class MPDController(object):
 
         return lst_songs
 
+    async def queue_delete(self, start:int, end: int):
+        await self.connect()
+        await self.mpd_client.delete((start, end+1))
+        playlist = await self.get_queue()
+        return playlist
+
     async def queue_move(self, start: int, end: int, to: int):
-        await self.mpd_client.move(1,7)
+        await self.connect()
+        await self.mpd_client.move((start, end+1), to)
         playlist = await self.get_queue()
         return playlist
 
