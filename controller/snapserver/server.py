@@ -1,5 +1,5 @@
 from dotenv import dotenv_values
-import snapcast.control
+from snapcast import control
 
 import asyncio
 import os
@@ -13,13 +13,11 @@ class SnapServer():
     def __init__(self, host) -> None:
         self.host = host
         self.loop = asyncio.get_event_loop() # Loop needed for snapserver
-
-    async def connect(self):
-        self.server = await snapcast.control.create_server(self.loop, self.host)
+        # asyncio.run(self.connect())
+        self.server = self.loop.run_until_complete(control.create_server(self.loop, self.host))
 
     async def list_clients(self):
        # print all client names
-        await self.connect()
         lst_clients = []
         clients = self.server.clients
         for client in clients:
