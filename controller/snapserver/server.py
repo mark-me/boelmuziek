@@ -1,7 +1,8 @@
 from dotenv import dotenv_values
-from snapcast import control
+import snapcast.control
 
 import asyncio
+import logging
 import os
 
 config = {
@@ -9,12 +10,25 @@ config = {
     **os.environ,  # override loaded values with environment variables
 }
 
+logger = logging.getLogger(__name__)
+
+snapserver_loop = asyncio.get_event_loop()
+snapserver = snapserver_loop.run_until_complete(
+    snapcast.control.create_server(snapserver_loop, config['HOST_SNAPSERVER'])
+    )
+
 class SnapServer():
     def __init__(self, host) -> None:
-        self.host = host
-        self.loop = asyncio.get_event_loop() # Loop needed for snapserver
-        #self.server = self.loop.run_until_complete(control.create_server(self.loop, self.host))
-        self.server = control.create_server(self.loop, self.host)
+        self._loop = snapserver_loop
+        self.server = snapserver
+        self.server.clients[0].set_callback(self.client_status)
+
+    def client_status(self, client):
+        logger.info(f"Volume: {client.volume}")
+
+    async def status(self):
+        status = self.server.version #await self.server.status()
+        return status
 
     async def list_clients(self):
        # print all client names
@@ -34,12 +48,19 @@ class SnapServer():
             )
         return lst_clients
 
-    async def client_toggle_mute(self, id: str):
-        clients = self.server.clients
-        for client in clients:
-            if(client.identifier == id):
+    async def client_volume(self, id_client: str, volume: int) -> None:
+        for client in self.server.clients:
+            if(client.identifier == id_client):
+                client.update_volume(data={'volume': volume})
+        # task_volume = asyncio.create_task(
+        #     self.server.client_volume(id_client, {'percent': volume, 'muted': False})
+        #     )
+
+    async def client_toggle_mute(self, id_client: str) -> dict:
+        for client in self.server.clients:
+            if(client.identifier == id_client):
                 mute = not client.muted
-                mute = await client.set_muted(mute)
+                task_mute = asyncio.create_task(client.set_muted(mute))
 
                 return [{
                     'friendly_name': client.friendly_name,
@@ -66,6 +87,11 @@ class SnapServer():
             lst_groups.append(dict_group)
         return lst_groups
 
+    async def group_volume(self, id_group: str, volume: int):
+        pass
+
     async def group_mute(self, id_group: str) -> bool:
-        await self.server.group_mute(identifier=id_group, status='false')
+        task_mute = asyncio.create_task(
+            self.server.group_mute(identifier=id_group, status='false')
+        )
 
