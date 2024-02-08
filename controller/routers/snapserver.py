@@ -4,14 +4,14 @@ from dotenv import dotenv_values
 import os
 from pydantic import PositiveInt
 
-from snapserver import SnapServer
+from snapserver import SnapcastServer
 
 config = {
     **dotenv_values(".env"),  # load shared development variables
     **os.environ,  # override loaded values with environment variables
 }
 
-snapserver = SnapServer(host=config['HOST_SNAPSERVER'])
+snapserver = SnapcastServer(host=config['HOST_SNAPSERVER'])
 
 router = APIRouter(
     prefix='/snapserver',
@@ -22,24 +22,26 @@ router = APIRouter(
 async def get_server_status():
     """ Status of the multi-room streamer
     """
-    result = await snapserver.status()
-    return result
+    return snapserver.status
 
 @router.get("/groups/")
 async def list_groups():
     """ List groups of multi-room clients
     """
-    groups = await snapserver.list_groups()
+    groups = snapserver.list_groups()
     return groups
 
 @router.get("/group/volume/")
-async def set_group_volume(id_group: str, volume: PositiveInt):
+async def set_group_volume(id_group: str, volume: PositiveInt=None):
     """ Set volume on a group of multi-room clients
 
     - **id_group** - The id of a client
     - **volume** - The volume expressed as a percentage between 0 and 100
     """
-    snapserver.group_volume(id_group=id_group, volume=volume)
+    if volume is None:
+        snapserver.get_group_volume(id_group=id_group)
+    else:
+        snapserver.set_group_volume(id_group=id_group, volume=volume)
 
 @router.get("/group/mute/")
 async def toggle_group_mute(id_group: str):

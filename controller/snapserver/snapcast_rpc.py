@@ -200,6 +200,22 @@ class SnapcastServer(SnapcastRequester):
             groups.append(SnapcastGroup(url=self.url, data_group=group))
         return groups
 
+    def list_groups(self):
+        lst_groups = []
+        for group in self.groups:
+            lst_groups.append(group.info)
+        return lst_groups
+
+    def get_group_volume(id_group: str):
+        for group in self.groups:
+            if group.id_group == id_group:
+                return group.volume
+
+    def set_group_volume(id_group: str, volume: int):
+        for group in self.groups:
+            if group.id_group == id_group:
+                return group.volume
+
 
 def show_volumes(snapserver):
     for group in snapserver.groups:
