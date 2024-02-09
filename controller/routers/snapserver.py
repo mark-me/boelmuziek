@@ -30,17 +30,16 @@ async def get_server_status():
 async def get_info_groups():
     """ List groups of multi-room clients with info
     """
-    lst_groups = []
-    for group in snapserver.groups:
-        lst_groups.append(group.info)
+    lst_groups = [group.info for group in snapserver.groups]
     return lst_groups
 
 @router.get("/group/")
 async def get_group_info(id_group: str):
-    for group in snapserver.groups:
-        if group.id_group == id_group:
-            return group.info
-    raise HTTPException(status_code=404, detail=f"Group {id_group} not found.")
+    group = next((group for group in snapserver.groups if group.id_group == id_group), None)
+    if group is None:
+        raise HTTPException(status_code=404, detail=f"Group {id_group} not found.")
+
+    return group.info
 
 @router.get("/group/volume/")
 async def set_group_volume(id_group: str, volume: int):
@@ -52,11 +51,14 @@ async def set_group_volume(id_group: str, volume: int):
     if volume < 0 or volume > 100:
         raise HTTPException(status_code=422,
                             detail="Input should have a value from 0 to 100")
-    for group in snapserver.groups:
-        if group.id_group == id_group:
-            group.volume = volume
-            return group.info
-    raise HTTPException(status_code=404, detail=f"Group {id_group} not found.")
+
+    group = next((group for group in snapserver.groups if group.id_group == id_group), None)
+    if group is None:
+        raise HTTPException(status_code=404, detail=f"Group {id_group} not found.")
+
+    group.volume = volume
+
+    return group.info
 
 @router.get("/group/mute/")
 async def toggle_group_mute(id_group: str):
@@ -64,22 +66,23 @@ async def toggle_group_mute(id_group: str):
 
     - **id_group** - The id of a group of clients
     """
-    for group in snapserver.groups:
-        if group.id_group == id_group:
-            return group.toggle_mute()
-    raise HTTPException(status_code=404, detail=f"Group {id_group} not found.")
+    group = next((group for group in snapserver.groups if group.id_group == id_group), None)
+    if group is None:
+        raise HTTPException(status_code=404, detail=f"Group {id_group} not found.")
+
+    return group.toggle_mute()
 
 @router.get("/clients/")
 async def list_clients(id_group: str):
     """ List multi-room clients
     """
-    lst_client_info = []
-    for group in snapserver.groups:
-        if group.id_group == id_group:
-            for client in group.clients:
-                lst_client_info.append(client.info)
-            return lst_client_info
-    raise HTTPException(status_code=404, detail=f"Group {id_group} not found.")
+    group = next((group for group in snapserver.groups if group.id_group == id_group), None)
+    if group is None:
+        raise HTTPException(status_code=404, detail=f"Group {id_group} not found.")
+
+    lst_info = [client.info for client in group.clients]
+
+    return lst_info
 
 @router.get("/client/volume/")
 async def set_client_volume(id_group: str, id_client: str, volume: int):
@@ -92,26 +95,34 @@ async def set_client_volume(id_group: str, id_client: str, volume: int):
     if volume < 0 or volume > 100:
         raise HTTPException(status_code=422,
                             detail="Input should have a value from 0 to 100")
-    for group in snapserver.groups:
-        if group.id_group == id_group:
-            for client in group.clients:
-                client.volume = volume
-                return client.info
-            raise HTTPException(status_code=404, detail=f"Client {id_client} within group {id_group} not found.")
-    raise HTTPException(status_code=404, detail=f"Group {id_group} not found.")
+
+    group = next((group for group in snapserver.groups if group.id_group == id_group), None)
+    if group is None:
+        raise HTTPException(status_code=404, detail=f"Group {id_group} not found.")
+
+    client = next((client for client in group.clients if client.id_client == id_client), None)
+    if client is None:
+        raise HTTPException(status_code=404, detail=f"Client {id_client} within group {id_group} not found.")
+
+    client.volume = volume
+    return client.info
+
 
 @router.get("/client/mute/")
-async def toggle_client_mute(id_client: str):
+async def toggle_client_mute(id_group: str, id_client: str):
     """ Mute multi-room client
 
     - **id_group**: The id of a group where the client resides in
     - **id_client**: The id of a client
     """
-    for group in snapserver.groups:
-        if group.id_group == id_group:
-            for client in group.clients:
-                client.toggle_mute()
-                return client.info
-            raise HTTPException(status_code=404, detail=f"Client {id_client} within group {id_group} not found.")
-    raise HTTPException(status_code=404, detail=f"Group {id_group} not found.")
+    group = next((group for group in snapserver.groups if group.id_group == id_group), None)
+    if group is None:
+        raise HTTPException(status_code=404, detail=f"Group {id_group} not found.")
+
+    client = next((client for client in group.clients if client.id_client == id_client), None)
+    if client is None:
+        raise HTTPException(status_code=404, detail=f"Client {id_client} within group {id_group} not found.")
+
+    client.toggle_mute()
+    return client.info
 

@@ -6,9 +6,10 @@ import requests
 
 logger = logging.getLogger(__name__)
 
+
 class SnapcastRequester:
-    """Handles requests to the Snapcast server
-    """
+    """Handles requests to the Snapcast server"""
+
     def __init__(self, url: str) -> None:
         self.url = url
 
@@ -30,15 +31,19 @@ class SnapcastRequester:
         ).json()
         if "result" in response.keys():
             if "params" in payload.keys():
-                logger.info(f"Requested method \'{payload['method']}\' with parameters: {payload['params']}")
+                logger.info(
+                    f"Requested method '{payload['method']}' with parameters: {payload['params']}"
+                )
             else:
-                logger.info(f"Requested method \'{payload['method']}\'")
+                logger.info(f"Requested method '{payload['method']}'")
             return response["result"]
         else:
             if "params" in payload.keys():
-                logger.info(f"Could not execute method \'{payload['method']}\' with parameters: {payload['params']}")
+                logger.info(
+                    f"Could not execute method '{payload['method']}' with parameters: {payload['params']}"
+                )
             else:
-                logger.info(f"Could not execute method \'{payload['method']}\'")
+                logger.info(f"Could not execute method '{payload['method']}'")
             return response["error"]
 
 
@@ -63,9 +68,9 @@ class SnapcastClient(SnapcastRequester):
     @property
     def info(self):
         info = self._status
-        info["lastSeen"] = datetime.utcfromtimestamp(
-            info["lastSeen"]["sec"]
-        ).strftime("%Y-%m-%d %H:%M:%S")
+        info["lastSeen"] = datetime.utcfromtimestamp(info["lastSeen"]["sec"]).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
         return info
 
     @property
@@ -120,15 +125,9 @@ class SnapcastGroup(SnapcastRequester):
     @property
     def info(self) -> dict:
         status = self._status
-        info = {key: status[key] for key in ['id', 'name', 'stream_id']}
-        info['volume'] = {
-            'muted': status['muted'],
-            'percent': self.volume
-        }
-        lst_clients = []
-        for client in self.clients:
-            lst_clients.append(client.info)
-        info['clients'] = lst_clients
+        info = {key: status[key] for key in ["id", "name", "stream_id"]}
+        info["volume"] = {"muted": status["muted"], "percent": self.volume}
+        info["clients"] = [client.info for client in self.clients]
         return info
 
     @property
@@ -145,9 +144,10 @@ class SnapcastGroup(SnapcastRequester):
 
     @property
     def clients(self) -> list:
-        clients = []
-        for dict_client in self._status["clients"]:
-            clients.append(SnapcastClient(url=self.url, data_client=dict_client))
+        clients = [
+            SnapcastClient(url=self.url, data_client=dict_client)
+            for dict_client in self._status["clients"]
+        ]
         return clients
 
     @property
@@ -169,9 +169,7 @@ class SnapcastGroup(SnapcastRequester):
 
     @property
     def volume(self) -> dict:
-        client_volumes = []
-        for client in self.clients:
-            client_volumes.append(client.volume)
+        client_volumes = [client.volume for client in self.clients]
         group_volume = int(sum(client_volumes) / len(client_volumes))
         return group_volume
 
@@ -210,13 +208,12 @@ class SnapcastServer(SnapcastRequester):
 
     @property
     def groups(self):
-        groups = []
-        for group in self.status["groups"]:
-            groups.append(SnapcastGroup(url=self.url, data_group=group))
+        groups = [
+            SnapcastGroup(url=self.url, data_group=group)
+            for group in self.status["groups"]
+        ]
         return groups
 
     def get_groups_info(self):
-        lst_groups = []
-        for group in self.groups:
-            lst_groups.append(group.info)
+        lst_groups = [group.info for group in self.groups]
         return lst_groups
