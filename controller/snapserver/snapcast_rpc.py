@@ -109,7 +109,12 @@ class SnapcastGroup(SnapcastRequester):
 
     @property
     def info(self) -> dict:
-        info = {key: self._status[key] for key in ['id', 'name', 'muted', 'stream_id']}
+        status = self._status
+        info = {key: status[key] for key in ['id', 'name', 'stream_id']}
+        info['volume'] = {
+            'muted': status['muted'],
+            'percent': self.volume
+        }
         lst_clients = []
         for client in self.clients:
             lst_clients.append(client.info)
@@ -149,7 +154,7 @@ class SnapcastGroup(SnapcastRequester):
     def toggle_mute(self) -> dict:
         mute = not self.mute
         payload = {"method": "Group.SetMute", "params": {"id": self._id, "mute": mute}}
-        response = self.__request(payload=payload)
+        response = self.request(payload=payload)
         return response
 
     @property
@@ -200,38 +205,8 @@ class SnapcastServer(SnapcastRequester):
             groups.append(SnapcastGroup(url=self.url, data_group=group))
         return groups
 
-    def list_groups(self):
+    def get_groups_info(self):
         lst_groups = []
         for group in self.groups:
             lst_groups.append(group.info)
         return lst_groups
-
-    def get_group_volume(id_group: str):
-        for group in self.groups:
-            if group.id_group == id_group:
-                return group.volume
-
-    def set_group_volume(id_group: str, volume: int):
-        for group in self.groups:
-            if group.id_group == id_group:
-                return group.volume
-
-
-def show_volumes(snapserver):
-    for group in snapserver.groups:
-        print(f"Group volume: {group.volume}")
-        for client in group.clients:
-            print(f"- {client.name_client} - Volume: {client.volume}")
-
-
-def main():
-    snapserver = SnapcastServer(host="192.168.0.25")  #'localhost') #
-    snapserver.connect()
-    # show_volumes(snapserver)
-    # snapserver.groups[0].volume = 80
-    # show_volumes(snapserver)
-    print(snapserver.groups[0].info)
-
-
-if __name__ == "__main__":
-    main()
