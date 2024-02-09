@@ -66,7 +66,7 @@ class Scrobbler:
                         await self.send_now_playing(song=playing)
                         playing_sent = playing
                 # Scrobbling
-                if status["elapsed"] / status["duration"] > 0.6 or status["elapsed"] > 360:
+                if status["elapsed"] / status["duration"] > 0.5 or status["elapsed"] > 360:
                     if playing["file"] != song_scrobbled["file"]:
                         await self.scrobble(song=playing)
                         song_scrobbled = playing
