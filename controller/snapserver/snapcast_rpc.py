@@ -7,10 +7,20 @@ import requests
 logger = logging.getLogger(__name__)
 
 class SnapcastRequester:
+    """Handles requests to the Snapcast server
+    """
     def __init__(self, url: str) -> None:
         self.url = url
 
     def request(self, payload: dict):
+        """Submits request
+
+        Args:
+            payload (dict): The method and it's parameters
+
+        Returns:
+            _type_: The result of the RPC
+        """
         identifier = random.randint(1, 1000)
         payload["id"] = identifier
         payload["jsonrpc"] = "2.0"
