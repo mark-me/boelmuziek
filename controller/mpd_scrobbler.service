@@ -1,0 +1,15 @@
+[Unit]
+Description=MPD Scrobbler
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/app
+ExecStart=/app/mpd_scrobbler.sh start
+ExecStop=/app/mpd_scrobbler.sh stop
+ExecReload=/app/mpd_scrobbler.sh restart
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
