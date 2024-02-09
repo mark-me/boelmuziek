@@ -8,7 +8,7 @@ from enum import Enum
 from typing import List
 import os
 
-from mpd_client import MPDController
+from mpd_client.mpd_client import MPDController
 
 config = {
     **dotenv_values(".env"),  # load shared development variables

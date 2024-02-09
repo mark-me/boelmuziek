@@ -5,7 +5,7 @@ import pandas as pd
 from enum import Enum
 import os
 
-from lastfm import LastFm
+from lastfm.lastfm import LastFm
 
 config = {
     **dotenv_values(".env"),  # load shared development variables

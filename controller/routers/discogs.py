@@ -7,7 +7,7 @@ from typing import List
 from io import BytesIO
 import os
 
-from discogs import Discogs
+from discogs.discogs import Discogs
 
 config = {
     **dotenv_values(".env"),  # load shared development variables

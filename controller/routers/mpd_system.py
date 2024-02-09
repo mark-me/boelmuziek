@@ -4,7 +4,7 @@ from dotenv import dotenv_values
 import asyncio
 import os
 
-from mpd_client import MPDController
+from mpd_client.mpd_client import MPDController
 
 config = {
     **dotenv_values(".env"),  # load shared development variables

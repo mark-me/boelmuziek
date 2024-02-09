@@ -8,7 +8,7 @@ import time
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 from lastfm import LastFm
-from mpd_client import MPDController
+from mpd import MPDController
 
 logging.basicConfig(
     format="%(levelname)s:\t%(asctime)s - %(module)s: %(message)s",

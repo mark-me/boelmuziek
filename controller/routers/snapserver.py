@@ -4,7 +4,7 @@ from dotenv import dotenv_values
 import os
 from pydantic import PositiveInt
 
-from snapserver import SnapcastServer
+from snapcast.snapcast import SnapcastServer
 
 config = {
     **dotenv_values(".env"),  # load shared development variables

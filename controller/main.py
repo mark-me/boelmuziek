@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse
 import uvicorn
 from dotenv import dotenv_values
 
-from mpd_client import MPDController
+from mpd_client.mpd_client import MPDController
 from routers import mpd_system, mpd_library, mpd_queue, mpd_playlists, snapserver, discogs, lastfm
 
 config = {
