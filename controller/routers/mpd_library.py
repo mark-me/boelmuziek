@@ -27,13 +27,25 @@ class TagTypeSearch(str, Enum):
 @router.get("/artists/")
 async def get_artists() -> list:
     """Get a list of all the artists"""
-    lst_results = []
     lst_results = await library.get_artists()
     return lst_results
 
+@router.get("artists/random")
+async def get_artists_random(qty_artists: int=15):
+    if qty_artists < 1:
+        HTTPException(status_code=401, detail="At least one artist must be randomly picked")
+    result = await library.get_artists_random(qty_artists=qty_artists)
+    return result
+
+@router.get("albums/random")
+async def get_albums_random(qty_albums: int=15):
+    if qty_albums < 1:
+        HTTPException(status_code=401, detail="At least one album must be randomly picked")
+    result = await library.get_albums_random(qty_albums=qty_albums)
+    return result
 
 @router.get("/albums/")
-async def get_albums(artist_name: str = None):
+async def get_albums(artist_name: str = None) -> list:
     """Get a list of albums
 
     - **artist_name**: Get albums of an artist or if nothing is passed all albums are retrieved.

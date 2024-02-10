@@ -1,4 +1,5 @@
 import logging
+import random as rnd
 
 from mpd_client import helper
 from mpd_client.mpd_connector import MPDConnection
@@ -169,5 +170,12 @@ class MPDLibrary(MPDConnection):
 
         return list_query_results
 
-    # TODO: Add random artists
-    # TODO: Add random albums
+    async def get_artists_random(self, qty_artists :int=15):
+        lst_artists = await self.get_artists()
+        lst_results = rnd.sample(lst_artists, qty_artists)
+        return lst_results
+
+    async def get_albums_random(self, qty_albums :int=15):
+        lst_albums = await self.get_albums()
+        lst_results = rnd.sample(lst_albums, qty_albums)
+        return lst_results
