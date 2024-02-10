@@ -4,9 +4,6 @@ import logging
 from mpd.asyncio import MPDClient
 
 from mpd_client.mpd_connector import MPDConnection
-from mpd_client.mpd_library import MPDLibrary
-from mpd_client.mpd_playlist import MPDPlaylist
-from mpd_client.mpd_queue import MPDQueue
 
 logging.basicConfig(
     format="%(levelname)s:\t%(asctime)s - %(module)s: %(message)s",

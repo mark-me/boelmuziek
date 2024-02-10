@@ -8,8 +8,9 @@ from dotenv import dotenv_values
 
 from routers import mpd_system, mpd_library, mpd_queue, mpd_playlists, snapserver, discogs, lastfm
 
+file_dot_env = os.path.dirname(os.path.abspath(__file__)) + "/.env"
 config = {
-    **dotenv_values(".env"),  # load shared development variables
+    **dotenv_values(file_dot_env),  # load shared development variables
     **os.environ,  # override loaded values with environment variables
 }
 

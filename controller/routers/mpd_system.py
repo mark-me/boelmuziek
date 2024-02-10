@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 from dotenv import dotenv_values
 
-import asyncio
 import os
 
 from mpd_client.mpd_server import MPDController
