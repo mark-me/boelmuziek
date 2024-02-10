@@ -140,7 +140,7 @@ class MPDLibrary(MPDConnection):
                 for album_dict in lst_artist_albums
                 if album_dict["album"] == name_album
             ][0]
-        except IndexError as e:
+        except IndexError:
             return None
         return album_dict
 
