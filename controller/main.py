@@ -1,4 +1,5 @@
 import os
+
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI, Request
@@ -6,7 +7,15 @@ from fastapi.responses import HTMLResponse
 import uvicorn
 from dotenv import dotenv_values
 
-from routers import mpd_system, mpd_library, mpd_queue, mpd_playlists, snapserver, discogs, lastfm
+from routers import (
+    mpd_system,
+    mpd_library,
+    mpd_queue,
+    mpd_playlists,
+    snapserver,
+    discogs,
+    lastfm,
+)
 
 file_dot_env = os.path.dirname(os.path.abspath(__file__)) + "/.env"
 config = {
@@ -23,6 +32,7 @@ app.include_router(snapserver.router)
 app.include_router(lastfm.router)
 app.include_router(discogs.router)
 
+
 @app.get("/", response_class=HTMLResponse)
 async def welcome_page(request: Request):
     content = """
@@ -38,6 +48,7 @@ async def welcome_page(request: Request):
     </html>
     """
     return HTMLResponse(content=content)
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5080)
