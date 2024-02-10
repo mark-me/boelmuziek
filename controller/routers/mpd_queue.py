@@ -8,7 +8,9 @@ from enum import Enum
 from typing import List
 import os
 
-from mpd_client.mpd_server import MPDQueue, MPDLibrary, MPDController
+from mpd_client.mpd_queue import MPDQueue
+from mpd_client.mpd_library import MPDLibrary
+from mpd_client.mpd_server import MPDController
 
 config = {
     **dotenv_values(".env"),  # load shared development variables
