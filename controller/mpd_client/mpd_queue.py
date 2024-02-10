@@ -84,7 +84,7 @@ class MPDQueue(MPDConnection):
 
         # Add songs to the current queue
         for song in lst_songs:
-            song_added = await self.mpd.findadd('file', song['file'])
+            await self.mpd.findadd('file', song['file'])
 
         return lst_songs
 

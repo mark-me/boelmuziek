@@ -27,7 +27,7 @@ class MPDLibrary(MPDConnection):
         await self.connect()
         try:
             cover = await self.mpd.albumart(uri)
-            binary = cover['binary']
+            binary = cover["binary"]
             logger.info(f"Retrieved album art for {uri}")
         except:
             logger.warning("Could not retrieve album cover of %s", uri)
@@ -46,9 +46,9 @@ class MPDLibrary(MPDConnection):
         Returns:
             str: A MIME type string
         """
-        if image_data.startswith(b'\x89PNG\r\n\x1a\n'):
+        if image_data.startswith(b"\x89PNG\r\n\x1a\n"):
             return "image/png"
-        elif image_data.startswith(b'\xff\xd8'):
+        elif image_data.startswith(b"\xff\xd8"):
             return "image/jpeg"
         else:
             raise ValueError("Unsupported image format")
@@ -69,7 +69,9 @@ class MPDLibrary(MPDConnection):
 
     async def get_album_cover(self, name_artist: str, name_album: str):
         await self.connect()
-        album = await self.get_album(name_artist=name_artist, name_album=name_album)
+        album = await self.get_artist_albums(
+            name_artist=name_artist, name_album=name_album
+        )
         if album is None:
             return None
         file = album["files"][0]["file"]
@@ -125,32 +127,17 @@ class MPDLibrary(MPDConnection):
         lst_query_results = helper.nest_album(lst_query_results)
         return lst_query_results
 
-    async def get_album(self, name_artist: str, name_album: str):
-        await self.connect()
-        lst_artist_albums = []
-        lst_artist_albums = await self.mpd.find(
-            "artist", name_artist
-        )  # , 'album', name_artist)
-        lst_artist_albums = helper.rename_song_dict_keys(lst_artist_albums)
-        lst_artist_albums = helper.type_library(lst_artist_albums)
-        lst_artist_albums = helper.nest_album(lst_artist_albums)
-        try:
-            album_dict = [
-                album_dict
-                for album_dict in lst_artist_albums
-                if album_dict["album"] == name_album
-            ][0]
-        except IndexError:
-            return None
-        return album_dict
-
-    async def search(self, type: str, filter: str):
+    async def search(self, type: str, filter: str, starts_with: bool = False):
         """Searches for artists, albums or songs.
 
         :param type: The type of music asset that is being searched for (artist, album or song)
         :param filter: The string that should be searched against, the searches are done with partial matching
         :return: A list of dictionaries, with a hierarchy depending on the type of search.
         """
+        if len(filter) < 3:
+            return {
+                "Error": "Provide at least 3 characters in the search string to start searching"
+            }
         if type not in ["artist", "album", "song"]:
             return [{"error": "incorrect search type"}]
         if type == "song":  # To match MPD internal naming convention
@@ -158,9 +145,19 @@ class MPDLibrary(MPDConnection):
 
         await self.connect()
         list_query_results = await self.mpd.search(type, filter)
-        list_query_results = helper.rename_song_dict_keys(list_query_results)
         if len(list_query_results) == 0:
             return {"error": type + " " + filter + " not found."}
+
+        if starts_with:
+            list_query_results = [
+                item
+                for item in list_query_results
+                if item[type][: (len(filter))].upper() == filter.upper()
+            ]
+
+        # Improve dict interpretability
+        list_query_results = helper.rename_song_dict_keys(list_query_results)
+        list_query_results = helper.type_library(list_query_results)
 
         # Nest files if artists or albums are searched
         if type == "artist":
