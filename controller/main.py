@@ -6,15 +6,12 @@ from fastapi.responses import HTMLResponse
 import uvicorn
 from dotenv import dotenv_values
 
-from mpd_client.mpd_client import MPDController
 from routers import mpd_system, mpd_library, mpd_queue, mpd_playlists, snapserver, discogs, lastfm
 
 config = {
     **dotenv_values(".env"),  # load shared development variables
     **os.environ,  # override loaded values with environment variables
 }
-
-mpd = MPDController(host=config['HOST_MPD'])
 
 app = FastAPI()
 app.include_router(mpd_system.router)
