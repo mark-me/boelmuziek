@@ -4,7 +4,7 @@ from dotenv import dotenv_values
 import asyncio
 import os
 
-from mpd_client.mpd_client import MPDController
+from mpd_client.mpd_server import MPDController
 
 config = {
     **dotenv_values(".env"),  # load shared development variables
@@ -31,7 +31,7 @@ async def list_outputs():
     """
     Lists the output devices MPD uses to stream it's playback to
     """
-    outputs = await mpd.outputs_get()
+    outputs = await mpd.get_outputs()
     return outputs
 
 @router.get("/output/toggle")
@@ -55,5 +55,5 @@ async def update_mpd_library():
     """
     Update the MPD music library to reflect changes to the music files.
     """
-    update = await mpd.mpd_client.update()
+    update = await mpd.update_db()
     return {'details': "Update #" + update}

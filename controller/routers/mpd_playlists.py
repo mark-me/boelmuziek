@@ -5,14 +5,14 @@ from pydantic import BaseModel
 from typing import List
 import os
 
-from mpd_client.mpd_client import MPDController
+from mpd_client.mpd_playlist import MPDPlaylist
 
 config = {
     **dotenv_values(".env"),  # load shared development variables
     **os.environ,  # override loaded values with environment variables
 }
 
-mpd = MPDController(host=config['HOST_MPD'])
+playlists = MPDPlaylist(host=config['HOST_MPD'])
 
 router = APIRouter(
     prefix='/playlists',
@@ -28,7 +28,7 @@ class PlaylistItems(BaseModel):
 @router.get("/")
 async def get_all_playlists():
     """Get the names of all stored playlists"""
-    lst_playlists = await mpd.get_playlists()
+    lst_playlists = await playlists.get_playlists()
     return lst_playlists
 
 @router.get("/playlist/")
@@ -37,7 +37,7 @@ async def get_playlist(name_playlist: str):
 
     - **name_playlist**: The name of the stored playlist.
     """
-    playlist = await mpd.get_playlist(name_playlist=name_playlist)
+    playlist = await playlists.get_playlist(name_playlist=name_playlist)
     return playlist
 
 @router.post("/add_files/")
@@ -49,8 +49,8 @@ async def add_file_to_playlist(items: PlaylistItems):
     - **files**: A list of relative MPD filenames to be added to the playlist
     """
     for file in items.files:
-        await mpd.playlist_add_file(name_playlist=items.name_playlist, file=file)
-    playlist = await mpd.get_playlist(items.name_playlist)
+        await playlists.playlist_add_file(name_playlist=items.name_playlist, file=file)
+    playlist = await playlists.get_playlist(items.name_playlist)
     return playlist
 
 @router.get("/delete-from-playlist/")
@@ -61,9 +61,9 @@ async def delete_file_from_playlist(name_playlist: str, position: int):
     - **name_playlist**: The name of the playlist (new or existing) where the files will be added to
     - **position**: The zero-based index of the song in the playlist to be removed
     """
-    is_success = await mpd.playlist_delete_song(name_playlist=name_playlist, position=position)
+    is_success = await playlists.playlist_delete_song(name_playlist=name_playlist, position=position)
     if is_success:
-        playlist = await mpd.get_playlist(name_playlist)
+        playlist = await playlists.get_playlist(name_playlist)
         return playlist
     else:
         raise HTTPException(status_code=406,
@@ -76,8 +76,8 @@ async def save_queue_as_playlist(name_playlist: str):
 
     - **name_playlist**: The name of the playlist (new or existing) where the files will be added to
     """
-    await mpd.queue_to_playlist(name_playlist=name_playlist)
-    playlist = await mpd.get_playlist(name_playlist=name_playlist)
+    await playlists.queue_to_playlist(name_playlist=name_playlist)
+    playlist = await playlists.get_playlist(name_playlist=name_playlist)
     return playlist
 
 @router.get("/enqueue/")
@@ -88,8 +88,8 @@ async def add_file_to_playlist(name_playlist: str, start_playing: bool=True):
     - **name_playlist**: The name of the playlist (new or existing) from where the files will be added
     - **start_playing**: Indicate whether to start playing the added files immediately or keep playback as is.
     """
-    await mpd.playlist_enqueue(name_playlist=name_playlist, start_playing=start_playing)
-    play_queue = await mpd.get_queue()
+    await playlists.playlist_enqueue(name_playlist=name_playlist, start_playing=start_playing)
+    play_queue = await playlists.get_queue()
     return play_queue
 
 @router.get("/delete/")
@@ -99,8 +99,8 @@ async def remove_playlist(name_playlist: str):
 
     - **name_playlist**: The name of the playlist to be deleted.
     """
-    await mpd.playlist_delete(name_playlist=name_playlist)
-    lst_playlists = await mpd.get_playlists()
+    await playlists.playlist_delete(name_playlist=name_playlist)
+    lst_playlists = await playlists.get_playlists()
     return lst_playlists
 
 @router.get("/rename/")
@@ -111,7 +111,7 @@ async def rename_playlist(name_playlist: str, name_new: str):
     - **name_playlist**: The name of the playlist to be deleted.
     - **name_new**: The new name of the playlist.
     """
-    await mpd.playlist_rename(name_playlist=name_playlist, name_new=name_new)
-    lst_playlists = await mpd.get_playlists()
+    await playlists.playlist_rename(name_playlist=name_playlist, name_new=name_new)
+    lst_playlists = await playlists.get_playlists()
     return lst_playlists
 

@@ -8,14 +8,16 @@ from enum import Enum
 from typing import List
 import os
 
-from mpd_client.mpd_client import MPDController
+from mpd_client.mpd_server import MPDQueue, MPDLibrary, MPDController
 
 config = {
     **dotenv_values(".env"),  # load shared development variables
     **os.environ,  # override loaded values with environment variables
 }
 
-mpd = MPDController(host=config['HOST_MPD'])
+queue = MPDQueue(host=config['HOST_MPD'])
+library = MPDLibrary(host=config['HOST_MPD'])
+controller = MPDController(host=config['HOST_MPD'])
 
 router = APIRouter(
     prefix='/queue',
@@ -42,8 +44,8 @@ class QueueItems(BaseModel):
 async def get_queue():
     """Retrieve the files in the queue with their complete information
     """
-    queue = await mpd.get_queue()
-    return queue
+    lst_queue = await queue.get_queue()
+    return lst_queue
 
 @router.post("/add/")
 async def add_to_queue(items: QueueItems):
@@ -53,13 +55,13 @@ async def add_to_queue(items: QueueItems):
     - **at_position**: at which position in the queue the files will be added.
     - **start_playing**: indicates whether the playback should start at the added files.
     - **clear_queue**: indicates whether to empty the queue before adding the files.
-    - **files**: A list disctionaries with relative MPD filenames to be added to the playlist.
+    - **files**: A list dictionaries with relative MPD filenames to be added to the playlist.
     """
     position = items.at_position
     first_round = True
     for item in items.files:
         first_round = items.start_playing and first_round
-        lst_queue = await mpd.queue_add_file(item.file, position=position, start_playing=first_round)
+        lst_queue = await queue.add_file(item.file, position=position, start_playing=first_round)
         position = position + 1
         first_round = False
     return lst_queue
@@ -68,7 +70,7 @@ async def add_to_queue(items: QueueItems):
 async def get_current_song():
     """Retrieve information about the currently playing song
     """
-    current_song = await mpd.current_song()
+    current_song = await queue.current_song()
     return current_song
 
 @router.get("/play-time/")
@@ -78,7 +80,7 @@ async def seek_position_in_current_song(time_seconds: str):
 
     - **time_seconds**: This could either be absolute time within the file, or relative time if preceded by a '+' or '-'
     """
-    await mpd.seek_current_song_time(time_seconds=time_seconds)
+    await controller.seek_current_song_time(time_seconds=time_seconds)
 
 @router.get("/play-song/")
 async def start_playing_from_queue(position: int=0):
@@ -87,7 +89,7 @@ async def start_playing_from_queue(position: int=0):
 
     - **position**: The position of the file to start playback. The position is 0 based.
     """
-    is_success = await mpd.play_on_queue(position=position)
+    is_success = await queue.play(position=position)
     if is_success:
         msg = {'details': 'Started playback'}
     else:
@@ -99,8 +101,8 @@ async def start_playing_from_queue(position: int=0):
 async def get_current_song_cover():
     """ Retrieve the cover art of the currently playing file.
     """
-    current_song = await mpd.current_song()
-    dict_image = await mpd.get_cover_art(current_song['file'])
+    current_song = await queue.current_song()
+    dict_image = await library.get_cover_art(current_song['file'])
     headers = {"Content-Type": dict_image['image_format']}
     return StreamingResponse(BytesIO(dict_image['image']), headers=headers)
 
@@ -111,26 +113,26 @@ async def execute_queue_control(action: QueueControlType):
 
     - **action** - Playing, pausing, stopping, next song or previous song
     """
-    await mpd.queue_control_set(action.value)
-    control_status = await mpd.get_status()
+    await controller.player_control_set(action.value)
+    control_status = await controller.get_status()
     return control_status['state']
 
 @router.get("/move/")
 async def move_queue_items(start: int, end: int, to: int):
-    playlist = await mpd.queue_move(start=start, end=end, to=to)
+    playlist = await queue.move_items(start=start, end=end, to=to)
     return playlist
 
 @router.get("/delete/")
 async def delete_queue_items(start: int, end: int):
-    playlist = await mpd.queue_delete(start=start, end=end)
+    playlist = await queue.delete_items(start=start, end=end)
     return playlist
 
 @router.get("/clear/")
 async def clear_queue():
     """Clear the playback queue
     """
-    await mpd.queue_clear()
-    status = await mpd.get_status()
+    await queue.clear()
+    status = await controller.get_status()
     if status['playlistlength'] == 0:
         return {'status_code': '200', 'detail': 'Cleared playlist'}
     else:
