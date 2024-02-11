@@ -143,7 +143,7 @@ class MPDLibrary(MPDConnection):
         lst_query_results = helper.nest_album(lst_query_results)
         return lst_query_results
 
-    async def get_song(self, name_song: str, name_artist: str=None):
+    async def get_song(self, name_song: str, name_artist: str=None, is_cover: bool=False):
         await self.connect()
         lst_songs = []
         lst_songs = await self.mpd.search("title", name_song)
@@ -151,7 +151,10 @@ class MPDLibrary(MPDConnection):
         lst_songs = helper.rename_song_dict_keys(lst_songs)
         lst_songs = helper.type_library(lst_songs)
         if name_artist is not None:
-            lst_songs = [song for song in lst_songs if song['artist'] == name_artist]
+            if is_cover:
+                lst_songs = [song for song in lst_songs if song['artist'] != name_artist]
+            else:
+                lst_songs = [song for song in lst_songs if song['artist'] == name_artist]
             lst_songs = helper.nest_album(lst_songs)
         else:
             lst_songs = helper.nest_artist_album(lst_songs)

@@ -83,15 +83,21 @@ async def get_album(name_artist: str):
     lst_results = await library.get_artist_albums(name_artist=name_artist)
     return lst_results
 
-@router.get('/song/')
-async def get_song_versions(name_song: str, name_artist: str=None):
+
+@router.get("/song/")
+async def get_song_versions(
+    name_song: str, name_artist: str = None, is_cover: bool = False
+):
     lst_results = []
-    lst_results = await library.get_song(name_artist=name_artist, name_song=name_song)
+    lst_results = await library.get_song(
+        name_artist=name_artist, name_song=name_song, is_cover=is_cover
+    )
     return lst_results
+
 
 @router.get("/search/{type}")
 async def search_music(
-    type: TagTypeSearch, search_string: str, starts_with: bool = False
+    type: TagTypeSearch, search_string: str, starts_with: bool = None
 ):
     """Searching for artists, albums or songs
 
