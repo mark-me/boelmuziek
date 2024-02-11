@@ -143,6 +143,21 @@ class MPDLibrary(MPDConnection):
         lst_query_results = helper.nest_album(lst_query_results)
         return lst_query_results
 
+    async def get_song(self, name_song: str, name_artist: str=None):
+        await self.connect()
+        lst_songs = []
+        lst_songs = await self.mpd.search("title", name_song)
+        # Improve dict interpretability
+        lst_songs = helper.rename_song_dict_keys(lst_songs)
+        lst_songs = helper.type_library(lst_songs)
+        if name_artist is not None:
+            lst_songs = [song for song in lst_songs if song['artist'] == name_artist]
+            lst_songs = helper.nest_album(lst_songs)
+        else:
+            lst_songs = helper.nest_artist_album(lst_songs)
+        return lst_songs
+
+
     async def search(self, type: str, filter: str, starts_with: bool = False):
         """Searches for artists, albums or songs.
 
