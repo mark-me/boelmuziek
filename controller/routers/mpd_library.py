@@ -30,19 +30,16 @@ async def get_artists() -> list:
     lst_results = await library.get_artists()
     return lst_results
 
-@router.get("artists/random")
-async def get_artists_random(qty_artists: int=15):
+
+@router.get("/artists/random/")
+async def get_artists_random(qty_artists: int = 15):
     if qty_artists < 1:
-        HTTPException(status_code=401, detail="At least one artist must be randomly picked")
+        HTTPException(
+            status_code=401, detail="At least one artist must be randomly picked"
+        )
     result = await library.get_artists_random(qty_artists=qty_artists)
     return result
 
-@router.get("albums/random")
-async def get_albums_random(qty_albums: int=15):
-    if qty_albums < 1:
-        HTTPException(status_code=401, detail="At least one album must be randomly picked")
-    result = await library.get_albums_random(qty_albums=qty_albums)
-    return result
 
 @router.get("/albums/")
 async def get_albums(artist_name: str = None) -> list:
@@ -57,6 +54,22 @@ async def get_albums(artist_name: str = None) -> list:
     else:
         lst_results = await library.get_artist_albums(artist_name)
     return lst_results
+
+
+@router.get("/albums/random/")
+async def get_albums_random(qty_albums: int = 15):
+    if qty_albums < 1:
+        HTTPException(
+            status_code=401, detail="At least one album must be randomly picked"
+        )
+    result = await library.get_albums_random(qty_albums=qty_albums)
+    return result
+
+
+@router.get("/album/")
+async def get_album(name_artist: str, name_album: str) -> dict:
+    result = await library.get_album(name_artist=name_artist, name_album=name_album)
+    return result
 
 
 @router.get("/artist-albums/")

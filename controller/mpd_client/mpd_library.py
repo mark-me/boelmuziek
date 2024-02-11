@@ -88,6 +88,11 @@ class MPDLibrary(MPDConnection):
         lst_query_results = await self.mpd.list("artist")
         return lst_query_results
 
+    async def get_artists_random(self, qty_artists :int=15):
+        lst_artists = await self.get_artists()
+        lst_results = rnd.sample(lst_artists, qty_artists)
+        return lst_results
+
     async def get_albums(self):
         """All albums in the database
 
@@ -110,6 +115,16 @@ class MPDLibrary(MPDConnection):
                 transformed_list.append({"albumartist": albumartist, "album": albums})
 
         return transformed_list
+
+    async def get_albums_random(self, qty_albums :int=15):
+        lst_albums = await self.get_albums()
+        lst_results = rnd.sample(lst_albums, qty_albums)
+        return lst_results
+
+    async def get_album(self, name_artist: str, name_album: str) -> list:
+        lst_artist_albums = await self.get_artist_albums(name_artist=name_artist)
+        album = [album for album in lst_artist_albums if album['album'] == name_album][0]
+        return album
 
     async def get_artist_albums(self, name_artist: str) -> list:
         """A list of albums (and their songs) that belong to a specific artists (strict search)
@@ -169,13 +184,3 @@ class MPDLibrary(MPDConnection):
             list_query_results = list_query_results
 
         return list_query_results
-
-    async def get_artists_random(self, qty_artists :int=15):
-        lst_artists = await self.get_artists()
-        lst_results = rnd.sample(lst_artists, qty_artists)
-        return lst_results
-
-    async def get_albums_random(self, qty_albums :int=15):
-        lst_albums = await self.get_albums()
-        lst_results = rnd.sample(lst_albums, qty_albums)
-        return lst_results
