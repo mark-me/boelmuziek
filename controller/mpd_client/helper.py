@@ -70,25 +70,25 @@ def type_library_dict(data) -> dict:
 
     for key in lst_key_int:
         if key in data.keys():
-            logger.info(f"Converting {key} of {data['file']} to int.")
+            logger.debug(f"Converting {key} of {data['file']} to int.")
             try:
                 data[key] = int(data[key])
-            except TypeError as e:
+            except TypeError:
                 logger.error(f"Could not convert {key} of {data['file']} to int.")
 
     for key in lst_key_datetime:
         if key in data.keys():
-            logger.info(f"Converting {key} of {data['file']} to datetime.")
+            logger.debug(f"Converting {key} of {data['file']} to datetime.")
             try:
                 data[key] =  parser.parse(data[key])
-            except TypeError as e:
+            except TypeError:
                 logger.error(f"Could not convert {key} of {data['file']} to datetime.")
     for key in lst_float:
         if key in data.keys():
-            logger.info(f"Converting {key} of {data['file']} to float.")
+            logger.debug(f"Converting {key} of {data['file']} to float.")
             try:
                 data[key] = float(data[key])
-            except TypeError as e:
+            except TypeError:
                 logger.error(f"Could not convert {key} of {data['file']} to float.")
     return data
 
