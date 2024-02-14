@@ -64,7 +64,7 @@ def type_library_dict(data) -> dict:
     Returns:
         dict: A dictionary with converted data types
     """
-    lst_key_int = ['track', 'disc', 'time']
+    lst_key_int = ['time'] #['track', 'disc', 'time']
     lst_key_datetime = ['last-modified']
     lst_float = ['duration']
 
