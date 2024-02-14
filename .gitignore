@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 secrets.yml
 controller/artist_images
+controller/*.csv
