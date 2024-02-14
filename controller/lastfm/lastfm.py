@@ -150,8 +150,8 @@ class LastFm:
                 {
                     "datetime": parser.parse(track.date),
                     "timestamp": int(track.timestamp),
-                    "song": track.track.title,
-                    "artist": track.track.artist.name,
+                    "name_song": track.track.title,
+                    "name_artist": track.track.artist.name,
                 }
             )
         return lst_loved_tracks
