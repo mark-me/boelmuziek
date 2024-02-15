@@ -40,10 +40,11 @@ class LastfmMatched:
         lst_periods = ["overall", "7day", "1month", "3month", "6month", "12month"]
         while True:
             for period in lst_periods:
-                df_albums_7day = await self.get_top_albums(period=period)
-                df_albums_7day.to_csv(f"top_albums_{period}.csv", sep='|', index=False)
-                df_artists_7day = await self.get_top_albums(period=period)
-                df_artists_7day.to_csv(f"top_artists_{period}.csv", sep='|', index=False)
+                logger.info(f"Getting top played for period {period}")
+                df_results = await self.get_top_albums(period=period)
+                df_results.to_csv(f"top_albums_{period}.csv", sep='|', index=False)
+                df_results = await self.get_top_artists(period=period)
+                df_results.to_csv(f"top_artists_{period}.csv", sep='|', index=False)
             time.sleep(seconds_interval)
 
     def start_processing(self, seconds_interval: int = 1800):
@@ -170,7 +171,7 @@ async def main():
     matched = LastfmMatched(mpd_library=library, lastfm=lastfm)
     matched.processing_thread()
     while True:
-        pass
+        time.sleep(1800)
 
 
 if __name__ == "__main__":
