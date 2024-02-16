@@ -25,14 +25,18 @@ class StopWatch:
     """A stopwatch class
     """
     def __init__(self) -> None:
-        self.time_started: float = None
-        self.time_paused: float = 0
-        self.is_paused = False
+        self._time_started: float = None
+        self._time_paused: float = 0
+        self._is_paused = False
+
+    @property
+    def is_paused(self) -> bool:
+        return self._is_paused
 
     def start(self) -> None:
         """Starts an internal timer by recording the current time"
         """
-        self.time_started = time.time()
+        self._time_started = time.time()
 
     def pause(self) -> None:
         """Pauses the stopwatch
@@ -41,12 +45,12 @@ class StopWatch:
             ValueError: Stopwatch was never started
             ValueError: Stopwatch is not paused
         """
-        if self.time_started is None:
+        if self._time_started is None:
             raise ValueError("Timer not started")
-        if self.is_paused:
+        if self._is_paused:
             raise ValueError("Timer is already paused")
-        self.time_paused = time.time()
-        self.is_paused = True
+        self._time_paused = time.time()
+        self._is_paused = True
 
     def resume(self) -> None:
         """Resuming the Stopwatch after pause
@@ -55,13 +59,13 @@ class StopWatch:
             ValueError: Stopwatch was never started
             ValueError: Stopwatch is not paused
         """
-        if self.time_started is None:
+        if self._time_started is None:
             self.start()
-        if not self.is_paused:
+        if not self._is_paused:
             self.start()
-        time_pause = time.time() - self.time_paused
-        self.time_started = self.time_started + time_pause
-        self.is_paused = False
+        time_pause = time.time() - self._time_paused
+        self._time_started = self._time_started + time_pause
+        self._is_paused = False
 
     def get_seconds(self) -> float:
         """Returns the number of seconds elapsed since the start time, less any pauses
@@ -69,12 +73,12 @@ class StopWatch:
         Returns:
             float: Number of seconds, with decimals for fractions
         """
-        if self.time_started is None:
+        if self._time_started is None:
             return 0
-        if self.is_paused:
-            return self.time_paused - self.time_started
+        if self._is_paused:
+            return self._time_paused - self._time_started
         else:
-            return time.time() - self.time_started
+            return time.time() - self._time_started
 
 
 class Scrobbler:
@@ -132,49 +136,98 @@ class Scrobbler:
             self.stopwatch.start()
             self.stopwatch.pause()
 
+    async def __status_report(self, prev_playing):
+        status = await self.mpd.get_status()
+        player_state = status["state"]
+        if 'elapsed' in status.keys():
+            elapsed = status['elapsed']
+        else:
+            elapsed = None
+
+        playing = await self.get_playing()
+        if playing != {}:
+            duration = float(playing['duration'])
+            file = playing['file']
+        else:
+            duration = None
+            file = None
+
+        if prev_playing != {} and prev_playing is not None:
+            file_previous = prev_playing['file']
+        else:
+            file_previous = None
+
+        dict_indicators = {
+            'player_state': player_state,
+            'file': file,
+            'duration': duration,
+            'elapsed': elapsed,
+            'file_previous': file_previous,
+            #'stopwatch_paused': self.stopwatch.is_paused,
+            #'status': status,
+            #'stopwatch_seconds': self.stopwatch.get_seconds(),
+            #'current_song': playing,
+            #'previous_song': prev_playing,
+        }
+        print(dict_indicators)
+
+
     async def loop(self) -> None:
         """A loop for scrobbling"""
         is_connected = await self.mpd.connect()
         await self.__sync_mpd_state_to_stopwatch()
         playing: dict = None
-        prev_playing: dict=None
+        prev_playing: dict = None
+
+        await self.__status_report(prev_playing=prev_playing)
 
         while is_connected:
             async for result in self.mpd.mpd.idle(["player"]):
-                status = await self.mpd.get_status()
-                player_state = status["state"]
+                # status = await self.mpd.get_status()
+                # player_state = status["state"]
+                playing = await self.get_playing()
+                await self.__status_report(prev_playing=prev_playing)
+                prev_playing = playing
 
-                if player_state == "stop":
-                    logger.info("Stopped playback")
-                    playing = await self.get_playing()
-                    sec_elapsed = self.stopwatch.get_seconds()
-                    perc_played = sec_elapsed / float(playing["duration"])
-                    if perc_played > 0.5 or sec_elapsed > 360:
-                        logger.info("Scrobbling song")
-                        await self.scrobble(song=playing)
-                elif player_state == "play":
-                    if playing != prev_playing:
-                        logger.info("Next track started playing")
-                        # Use previous track stats for scrobbling
-                        sec_elapsed = self.stopwatch.get_seconds()
-                        perc_played = sec_elapsed / float(playing["duration"])
-                        if perc_played > 0.5 or sec_elapsed > 360:
-                            logger.info("Scrobbling song")
-                            await self.scrobble(song=playing)
-                        # Set now playing
-                        playing = await self.get_playing()
-                        self.lastfm.now_playing_track(
-                            name_artist= playing['artist'],
-                            name_song=playing['song']
-                        )
-                        self.stopwatch.start()
-                    else:
-                        logger.info("Resumed after pause")
-                        self.stopwatch.resume()
-                elif player_state == "pause":
-                    logger.info("Paused playback")
-                    self.stopwatch.pause()
-                    prev_playing = playing
+                # bool_playlist_cleared = await self.__is_clearing_playlist()
+                # if bool_playlist_cleared:
+                #     logger.info("Cleared playlist")
+
+                # if player_state == "stop":
+                #     logger.info("Stopped playback")
+                #     # Scrobble current track if elapsed crosses threshold
+                #     playing = await self.get_playing()
+                #     if playing is not None:
+                #         sec_elapsed = self.stopwatch.get_seconds()
+                #         perc_played = sec_elapsed / float(playing["duration"])
+                #         if perc_played > 0.5 or sec_elapsed > 360:
+                #             logger.info("Scrobbling song")
+                #             await self.scrobble(song=playing)
+                # elif player_state == "play":
+                #     # If there is a new track playing
+                #     if playing != prev_playing:
+                #         logger.info("Next track started playing")
+                #         # Scrobble previous track if elapsed crosses threshold
+                #         sec_elapsed = self.stopwatch.get_seconds()
+                #         perc_played = sec_elapsed / float(playing["duration"])
+                #         if perc_played > 0.5 or sec_elapsed > 360:
+                #             logger.info("Scrobbling song")
+                #             await self.scrobble(song=playing)
+                #         # Set now playing
+                #         playing = await self.get_playing()
+                #         self.lastfm.now_playing_track(
+                #             name_artist= playing['artist'],
+                #             name_song=playing['song']
+                #         )
+                #         self.stopwatch.start()
+                #     # If it is resuming a currently playing track
+                #     else:
+                #         logger.info("Resumed after pause")
+                #         self.stopwatch.resume()
+                # elif player_state == "pause":
+                #     logger.info("Paused playback")
+                #     self.stopwatch.pause()
+                # prev_playing = playing
 
     async def start(self):
         is_first_pass = True
