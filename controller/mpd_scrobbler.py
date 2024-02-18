@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 
 
 class StopWatch:
-    """A stopwatch class
-    """
+    """A stopwatch class"""
+
     def __init__(self) -> None:
         self._time_started: float = None
         self._time_paused: float = 0
@@ -34,8 +34,7 @@ class StopWatch:
         return self._is_paused
 
     def start(self) -> None:
-        """Starts an internal timer by recording the current time"
-        """
+        """Starts an internal timer by recording the current time" """
         self._time_started = time.time()
 
     def pause(self) -> None:
@@ -82,8 +81,8 @@ class StopWatch:
 
 
 class Scrobbler:
-    """Listens to MPD to scrobble plays to Last.fm
-    """
+    """Listens to MPD to scrobble plays to Last.fm"""
+
     def __init__(
         self,
         host_controller: str,
@@ -130,64 +129,92 @@ class Scrobbler:
     async def __sync_mpd_state_to_stopwatch(self):
         await self.mpd.connect()
         status = await self.mpd.get_status()
-        if status["state"] == 'play':
+        if status["state"] == "play":
             self.stopwatch.start()
         elif status["state"] == "pause":
             self.stopwatch.start()
             self.stopwatch.pause()
 
-    async def __status_report(self, prev_playing):
+    async def __status_report(self, prev_playing, prev_player_state):
         status = await self.mpd.get_status()
         player_state = status["state"]
-        if 'elapsed' in status.keys():
-            elapsed = status['elapsed']
+        # Handling not playing state
+        if "elapsed" in status.keys():
+            elapsed = status["elapsed"]
         else:
             elapsed = None
 
+        # Handling empty now playing track
         playing = await self.get_playing()
         if playing != {}:
-            duration = float(playing['duration'])
-            file = playing['file']
+            duration = float(playing["duration"])
+            file = playing["file"]
         else:
             duration = None
             file = None
 
+        # Handling empty previous playing track
         if prev_playing != {} and prev_playing is not None:
-            file_previous = prev_playing['file']
+            file_previous = prev_playing["file"]
+            duration_previous = float(prev_playing["duration"])
         else:
             file_previous = None
+            duration_previous = None
 
+        # Combine information to inform Last.fm action
         dict_indicators = {
-            'player_state': player_state,
-            'file': file,
-            'duration': duration,
-            'elapsed': elapsed,
-            'file_previous': file_previous,
-            #'stopwatch_paused': self.stopwatch.is_paused,
-            #'status': status,
-            #'stopwatch_seconds': self.stopwatch.get_seconds(),
-            #'current_song': playing,
-            #'previous_song': prev_playing,
+            "player_state": player_state,
+            "file": file,
+            "duration": duration,
+            "elapsed": elapsed,
+            "file_previous": file_previous,
+            "duration_previous": duration_previous,
+            "stopwatch_paused": self.stopwatch.is_paused,
+            "stopwatch_seconds": self.stopwatch.get_seconds(),
         }
-        print(dict_indicators)
-
+        return dict_indicators
 
     async def loop(self) -> None:
         """A loop for scrobbling"""
         is_connected = await self.mpd.connect()
         await self.__sync_mpd_state_to_stopwatch()
+        status = await self.mpd.get_status()
+        player_state = prev_player_state = status["state"]
         playing: dict = None
         prev_playing: dict = None
 
-        await self.__status_report(prev_playing=prev_playing)
+        dict_indicators = await self.__status_report(
+            prev_playing=prev_playing, prev_player_state=prev_player_state
+        )
+        print(dict_indicators)
+        if dict_indicators['player_state'] == 'play':
+            self.lastfm.now_playing_track(
+                name_artist= playing['artist'],
+                name_song=playing['song']
+            )
 
         while is_connected:
             async for result in self.mpd.mpd.idle(["player"]):
-                # status = await self.mpd.get_status()
-                # player_state = status["state"]
+                status = await self.mpd.get_status()
+                player_state = status["state"]
                 playing = await self.get_playing()
-                await self.__status_report(prev_playing=prev_playing)
+
+                dict_indicators = await self.__status_report(
+                    prev_playing=prev_playing, prev_player_state=prev_player_state
+                )
+                print(dict_indicators)
+
+                # Stopwatch
+                if player_state == "play":
+                    if prev_player_state == "pause":
+                        self.stopwatch.resume()
+                    if prev_player_state == "play" or prev_player_state == "stop":
+                        self.stopwatch.start()
+                elif player_state == "pause":
+                    self.stopwatch.pause()
+
                 prev_playing = playing
+                prev_player_state = player_state
 
                 # bool_playlist_cleared = await self.__is_clearing_playlist()
                 # if bool_playlist_cleared:
