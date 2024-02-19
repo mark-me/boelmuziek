@@ -135,126 +135,96 @@ class Scrobbler:
             self.stopwatch.start()
             self.stopwatch.pause()
 
-    async def __status_report(self, prev_playing, prev_player_state):
+    async def __gather_play_status(self, prev_playing_track):
         status = await self.mpd.get_status()
-        player_state = status["state"]
-        # Handling not playing state
-        if "elapsed" in status.keys():
-            elapsed = status["elapsed"]
-        else:
-            elapsed = None
+        control_state = status["state"]
 
         # Handling empty now playing track
         playing = await self.get_playing()
-        if playing != {}:
-            duration = float(playing["duration"])
-            file = playing["file"]
+        if playing == {}:
+            playing = None
         else:
-            duration = None
-            file = None
+            playing["duration"] = float(playing["duration"])
 
         # Handling empty previous playing track
-        if prev_playing != {} and prev_playing is not None:
-            file_previous = prev_playing["file"]
-            duration_previous = float(prev_playing["duration"])
+        if prev_playing_track == {} or prev_playing_track is None:
+            prev_playing_track = None
         else:
-            file_previous = None
-            duration_previous = None
+            prev_playing_track["duration"] = float(prev_playing_track["duration"])
 
         # Combine information to inform Last.fm action
         dict_indicators = {
-            "player_state": player_state,
-            "file": file,
-            "duration": duration,
-            "elapsed": elapsed,
-            "file_previous": file_previous,
-            "duration_previous": duration_previous,
+            "control_state": control_state,
+            "control_status": status,
+            "playing": playing,
+            "playing_previous": prev_playing_track,
             "stopwatch_paused": self.stopwatch.is_paused,
             "stopwatch_seconds": self.stopwatch.get_seconds(),
         }
         return dict_indicators
+
+    async def __post_to_lastfm(self, dict_indicators: dict) -> None:
+        playing_track = dict_indicators["playing"]
+        prev_playing_track = dict_indicators["playing_previous"]
+        control_state = dict_indicators["control_state"]
+
+        if control_state == "pause":
+            pass
+        elif control_state == "play":
+            # Set to 'now playing'
+            await self.send_now_playing(song=playing_track)
+            if (
+                prev_playing_track is not None
+                and prev_playing_track["file"] != playing_track["file"]
+            ):
+                # Scrobble
+                perc_played = (
+                    dict_indicators["stopwatch_seconds"]
+                    / prev_playing_track["duration"]
+                )
+                if perc_played > 0.5 or dict_indicators["stopwatch_seconds"] > 360:
+                    await self.scrobble(song=prev_playing_track)
+        elif control_state == "stop":
+            perc_played = (
+                dict_indicators["stopwatch_seconds"] / playing_track["duration"]
+            )
+            if perc_played > 0.5 or dict_indicators["stopwatch_seconds"] > 360:
+                await self.scrobble(song=playing_track)
 
     async def loop(self) -> None:
         """A loop for scrobbling"""
         is_connected = await self.mpd.connect()
         await self.__sync_mpd_state_to_stopwatch()
         status = await self.mpd.get_status()
-        player_state = prev_player_state = status["state"]
-        playing: dict = None
-        prev_playing: dict = None
+        control_state = prev_control_state = status["state"]
+        prev_playing_track: dict = None
 
-        dict_indicators = await self.__status_report(
-            prev_playing=prev_playing, prev_player_state=prev_player_state
+        dict_indicators = await self.__gather_play_status(
+            prev_playing_track=prev_playing_track
         )
-        print(dict_indicators)
-        if dict_indicators['player_state'] == 'play':
-            self.lastfm.now_playing_track(
-                name_artist= playing['artist'],
-                name_song=playing['song']
-            )
+        await self.__post_to_lastfm(dict_indicators=dict_indicators)
 
         while is_connected:
             async for result in self.mpd.mpd.idle(["player"]):
                 status = await self.mpd.get_status()
-                player_state = status["state"]
-                playing = await self.get_playing()
+                control_state = status["state"]
 
-                dict_indicators = await self.__status_report(
-                    prev_playing=prev_playing, prev_player_state=prev_player_state
+                dict_indicators = await self.__gather_play_status(
+                    prev_playing_track=prev_playing_track
                 )
-                print(dict_indicators)
+                await self.__post_to_lastfm(dict_indicators=dict_indicators)
 
                 # Stopwatch
-                if player_state == "play":
-                    if prev_player_state == "pause":
+                if control_state == "play":
+                    if prev_control_state == "pause":
                         self.stopwatch.resume()
-                    if prev_player_state == "play" or prev_player_state == "stop":
+                    elif prev_control_state == "play" or prev_control_state == "stop":
                         self.stopwatch.start()
-                elif player_state == "pause":
+                elif control_state == "pause":
                     self.stopwatch.pause()
 
-                prev_playing = playing
-                prev_player_state = player_state
-
-                # bool_playlist_cleared = await self.__is_clearing_playlist()
-                # if bool_playlist_cleared:
-                #     logger.info("Cleared playlist")
-
-                # if player_state == "stop":
-                #     logger.info("Stopped playback")
-                #     # Scrobble current track if elapsed crosses threshold
-                #     playing = await self.get_playing()
-                #     if playing is not None:
-                #         sec_elapsed = self.stopwatch.get_seconds()
-                #         perc_played = sec_elapsed / float(playing["duration"])
-                #         if perc_played > 0.5 or sec_elapsed > 360:
-                #             logger.info("Scrobbling song")
-                #             await self.scrobble(song=playing)
-                # elif player_state == "play":
-                #     # If there is a new track playing
-                #     if playing != prev_playing:
-                #         logger.info("Next track started playing")
-                #         # Scrobble previous track if elapsed crosses threshold
-                #         sec_elapsed = self.stopwatch.get_seconds()
-                #         perc_played = sec_elapsed / float(playing["duration"])
-                #         if perc_played > 0.5 or sec_elapsed > 360:
-                #             logger.info("Scrobbling song")
-                #             await self.scrobble(song=playing)
-                #         # Set now playing
-                #         playing = await self.get_playing()
-                #         self.lastfm.now_playing_track(
-                #             name_artist= playing['artist'],
-                #             name_song=playing['song']
-                #         )
-                #         self.stopwatch.start()
-                #     # If it is resuming a currently playing track
-                #     else:
-                #         logger.info("Resumed after pause")
-                #         self.stopwatch.resume()
-                # elif player_state == "pause":
-                #     logger.info("Paused playback")
-                #     self.stopwatch.pause()
-                # prev_playing = playing
+                prev_playing_track = await self.get_playing()
+                prev_control_state = control_state
 
     async def start(self):
         is_first_pass = True
