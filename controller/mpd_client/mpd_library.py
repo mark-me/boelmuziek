@@ -85,7 +85,10 @@ class MPDLibrary(MPDConnection):
         :return: A list of dictionaries for artists
         """
         await self.connect()
-        lst_query_results = await self.mpd.list("artist")
+        try:
+            lst_query_results = await self.mpd.list("artist")
+        except ConnectionError:
+            lst_query_results = None
         return lst_query_results
 
     async def get_artists_random(self, qty_artists :int=15):
