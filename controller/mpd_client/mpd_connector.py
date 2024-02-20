@@ -1,6 +1,6 @@
 import logging
 
-from mpd.asyncio import MPDClient
+from mpd.asyncio import MPDClient, ConnectionError
 
 logging.basicConfig(
     format="%(levelname)s:\t%(asctime)s - %(module)s: %(message)s",

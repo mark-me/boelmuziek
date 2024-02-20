@@ -99,7 +99,10 @@ class MPDLibrary(MPDConnection):
         :return: A list of dictionaries for albums with their artists
         """
         await self.connect()
-        lst_query_results = await self.mpd.list("album", "group", "albumartist")
+        try:
+            lst_query_results = await self.mpd.list("album", "group", "albumartist")
+        except ConnectionError:
+            return None
         transformed_list = []
 
         for entry in lst_query_results:
