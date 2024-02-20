@@ -232,6 +232,7 @@ class Scrobbler:
             if is_first_pass:
                 logger.error("Not authenticated with Last.fm. Use API to login.")
                 is_first_pass = False
+            time.sleep(3)
         logger.info("Successfully logged in Last.fm")
         await self.loop()
 
