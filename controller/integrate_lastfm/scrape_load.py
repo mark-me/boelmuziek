@@ -33,46 +33,22 @@ class LastfmMatched:
     def __init__(self, mpd_library: MPDLibrary, lastfm: LastFm) -> None:
         self.lastfm = lastfm
         self.library = mpd_library
+        self.con_sqlite = sqlite3.connect("lastfm.sqlite", check_same_thread=False) #":memory:"
         self.loved_songs = []
         self.top_artists = []
 
-    async def process_lastfm_data(self, seconds_interval: int = 1800):
-        lst_periods = ["overall", "7day", "1month", "3month", "6month", "12month"]
-        while True:
-            for period in lst_periods:
-                logger.info(f"Getting top played for period {period}")
-                df_results = await self.get_top_albums(period=period)
-                df_results.to_csv(f"top_albums_{period}.csv", sep='|', index=False)
-                df_results = await self.get_top_artists(period=period)
-                df_results.to_csv(f"top_artists_{period}.csv", sep='|', index=False)
-            time.sleep(seconds_interval)
-
-    def start_processing(self, seconds_interval: int = 1800):
-        self.con_sqlite = sqlite3.connect(":memory:")
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(self.process_lastfm_data(seconds_interval))
-        loop.close()
-
-    def processing_thread(self, seconds_interval: int = 1800):
-        daemon = Thread(
-            target=self.start_processing,
-            args=(seconds_interval,),
-            daemon=True,
-            name="Lastfm Process",
-        )
-        daemon.start()
-
-    def __get_top_lastfm(self, type_asset: str, period: str, limit: int):
+    def __acquire_top_lastfm(self, type_asset: str, period: str, limit: int):
         lst_assets = self.lastfm.get_top_assets(
             type_asset=type_asset, limit=limit, period=period
         )
         df_assets = pd.DataFrame.from_records(lst_assets)
-        df_assets.to_sql(
-            f"{type_asset}_lastfm", self.con_sqlite, if_exists="replace", index=False
-        )
+        df_assets["period"] = period
+        return df_assets
+        # df_assets.to_sql(
+        #     f"{type_asset}_lastfm", self.con_sqlite, if_exists="replace", index=False
+        # )
 
-    async def __get_mpd_assets(self, type_asset: str) -> None:
+    async def __acquire_mpd_assets(self, type_asset: str) -> None:
         if type_asset == "artists":
             lst_assets = await self.library.get_artists()
         elif type_asset == "albums":
@@ -84,33 +60,66 @@ class LastfmMatched:
             f"{type_asset}_mpd", self.con_sqlite, if_exists="replace", index=False
         )
 
-    async def get_top_artists(self, period: str, limit: int = 1000):
-        self.__get_top_lastfm(type_asset="artists", period=period, limit=limit)
-        await self.__get_mpd_assets(type_asset="artists")
+    async def __acquire_data(self, seconds_interval: int = 1800):
+        lst_periods = ["overall", "7day", "1month", "3month", "6month", "12month"]
+        lst_artists = []
+        lst_albums = []
+        while True:
+            for period in lst_periods:
+                logger.info(f"Getting top played for period {period}")
+                lst_artists.append(self.__acquire_top_lastfm(type_asset="artists", period=period, limit=1000))
+                lst_albums.append(self.__acquire_top_lastfm(type_asset="albums", period=period, limit=1000))
+            # Store Last.fm results
+            df_artists = pd.concat(lst_artists)
+            df_artists.to_sql("artists_lastfm", self.con_sqlite, if_exists="replace", index=False)
+            df_albums = pd.concat(lst_albums)
+            df_albums.to_sql("albums_lastfm", self.con_sqlite, if_exists="replace", index=False)
+            await self.__acquire_mpd_assets(type_asset="artists")
+            await self.__acquire_mpd_assets(type_asset="albums")
+            time.sleep(seconds_interval)
 
-        sql_statement = """SELECT
-                                lfm.name_artist,
-                                lfm.qty_plays
-                            FROM artists_lastfm AS lfm
-                            INNER JOIN artists_mpd as mpd
-                                ON lfm.name_artist = mpd.artist"""
-        df_artists = pd.read_sql(sql=sql_statement, con=self.con_sqlite)
-        return df_artists
+    def start_processing(self, seconds_interval: int = 1800):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(self.__acquire_data(seconds_interval))
+        loop.close()
 
-    async def get_top_albums(self, period: str, limit: int = 1000) -> dict:
-        self.__get_top_lastfm(type_asset="albums", period=period, limit=limit)
-        await self.__get_mpd_assets(type_asset="albums")
+    def processing_thread(self, seconds_interval: int = 1800):
+        daemon = Thread(
+            target=self.start_processing,
+            args=(seconds_interval,),
+            daemon=True,
+            name="Lastfm Process",
+        )
+        daemon.start()
 
-        sql_statement = """SELECT
-                                lfm.name_artist,
-                                lfm.name_album,
-                                lfm.qty_plays
-                            FROM albums_lastfm AS lfm
-                            INNER JOIN albums_mpd as mpd
-                                ON lfm.name_artist = mpd.albumartist AND
-                                    lfm.name_album = mpd.album"""
-        df_albums = pd.read_sql(sql=sql_statement, con=self.con_sqlite)
-        return df_albums
+    # async def acquire_top_artists(self, period: str, limit: int = 1000):
+    #     self.__acquire_top_lastfm(type_asset="artists", period=period, limit=limit)
+    #     await self.__acquire_mpd_assets(type_asset="artists")
+
+    #     sql_statement = """SELECT
+    #                             lfm.name_artist,
+    #                             lfm.qty_plays
+    #                         FROM artists_lastfm AS lfm
+    #                         INNER JOIN artists_mpd as mpd
+    #                             ON lfm.name_artist = mpd.artist"""
+    #     df_artists = pd.read_sql(sql=sql_statement, con=self.con_sqlite)
+    #     return df_artists
+
+    # async def get_top_albums(self, period: str, limit: int = 1000) -> dict:
+    #     self.__acquire_top_lastfm(type_asset="albums", period=period, limit=limit)
+    #     await self.__acquire_mpd_assets(type_asset="albums")
+
+    #     sql_statement = """SELECT
+    #                             lfm.name_artist,
+    #                             lfm.name_album,
+    #                             lfm.qty_plays
+    #                         FROM albums_lastfm AS lfm
+    #                         INNER JOIN albums_mpd as mpd
+    #                             ON lfm.name_artist = mpd.albumartist AND
+    #                                 lfm.name_album = mpd.album"""
+    #     df_albums = pd.read_sql(sql=sql_statement, con=self.con_sqlite)
+    #     return df_albums
 
     async def __get_mpd_songs(self, lst_source) -> list:
         lst_songs = []
