@@ -156,18 +156,10 @@ class LastfmMatched:
         return lst_songs
 
 
-async def get_artists(matched: LastfmMatched, period: str, page: int = 0):
-    start_time = time.time()
-    lst_artist = await matched.get_top_artists(period=period, limit=50, page=page)
-    print("-- Top Artists - %s seconds ---" % (time.time() - start_time))
-    print("-- Page: " + str(page))
-    [print(artist) for artist in lst_artist]
-
-
 async def main():
     lastfm = LastFm(host=config["HOST_CONTROLLER"], port=config["PORT_CONTROLLER"])
     library = MPDLibrary(host=config["HOST_MPD"])
-    # Get top albums
+
     matched = LastfmMatched(mpd_library=library, lastfm=lastfm)
     matched.processing_thread()
     while True:
