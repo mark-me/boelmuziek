@@ -45,30 +45,20 @@ class LastFmMusicLibrarySyncer:
         )
         df_assets = pd.DataFrame.from_records(lst_assets)
         df_assets["period"] = period
+        cols_replace = []
         if type_asset == "artists":
-            df_assets["name_artist"] = (
-                df_assets["name_artist"]
-                .str.lower()
-                .str.replace("'", "")
-                .str.replace('"', "")
-            )
+            cols_replace = ["name_artist"]
         elif type_asset == "albums":
-            df_assets["name_artist"] = (
-                df_assets["name_artist"]
-                .str.lower()
-                .str.replace("'", "")
-                .str.replace('"', "")
-            )
-            df_assets["name_album"] = (
-                df_assets["name_album"]
-                .str.lower()
-                .str.replace("'", "")
-                .str.replace('"', "")
-            )
+            cols_replace = ["name_artist", "name_album"]
+        elif type_asset == "songs":
+            cols_replace = ["name_artist", "name_song"]
+        df_assets[cols_replace] = (
+            df_assets[cols_replace]
+            .apply(lambda x: x.str.lower())
+            .apply(lambda x: x.str.replace("'", ""))
+            .apply(lambda x: x.str.replace('"', ""))
+        )
         return df_assets
-        # df_assets.to_sql(
-        #     f"{type_asset}_lastfm", self.con_sqlite, if_exists="replace", index=False
-        # )
 
     async def __acquire_mpd_assets(self, type_asset: str) -> None:
         if type_asset == "artists":
@@ -86,9 +76,11 @@ class LastFmMusicLibrarySyncer:
                 .str.replace("'", "")
             )
             # Sort DataFrame by the length of 'artist' column in descending order
-            df_assets = df_assets.sort_values(by='artist', key=lambda x: x.str.len(), ascending=False)
+            df_assets = df_assets.sort_values(
+                by="artist", key=lambda x: x.str.len(), ascending=False
+            )
             # Drop duplicates in 'name_artist' column, keeping the first occurrence
-            df_assets = df_assets.drop_duplicates(subset='artist_match', keep='first')
+            df_assets = df_assets.drop_duplicates(subset="artist_match", keep="first")
         elif type_asset == "albums":
             df_assets["artist_match"] = (
                 df_assets["albumartist"]
@@ -105,33 +97,25 @@ class LastFmMusicLibrarySyncer:
 
     async def __acquire_data(self, seconds_interval: int = 1800):
         lst_periods = ["overall", "7day", "1month", "3month", "6month", "12month"]
-        lst_artists = []
-        lst_albums = []
+        lst_asset_types = ["artists", "albums", "songs"]
+
         while True:
-            for period in lst_periods:
-                logger.info(f"Getting top played for period {period}")
-                lst_artists.append(
-                    self.__acquire_top_lastfm(
-                        type_asset="artists", period=period, limit=1000
-                    )
+            for type_asset in lst_asset_types:
+                lst_dfs = []
+                for period in lst_periods:
+                    logger.info(f"Getting top played {type_asset} for period {period}")
+                    df = self.__acquire_top_lastfm(
+                            type_asset=type_asset, period=period, limit=1000
+                        )
+                    lst_dfs.append(df)
+                df = pd.concat(lst_dfs)
+                # Store Last.fm results
+                df.to_sql(
+                    f"{type_asset}_lastfm", self.con_sqlite, if_exists="replace", index=False
                 )
-                lst_albums.append(
-                    self.__acquire_top_lastfm(
-                        type_asset="albums", period=period, limit=1000
-                    )
-                )
-            # Store Last.fm results
-            df_artists = pd.concat(lst_artists)
-            df_artists.to_sql(
-                "artists_lastfm", self.con_sqlite, if_exists="replace", index=False
-            )
-            df_albums = pd.concat(lst_albums)
-            df_albums.to_sql(
-                "albums_lastfm", self.con_sqlite, if_exists="replace", index=False
-            )
-            # Store MPD library
-            await self.__acquire_mpd_assets(type_asset="artists")
-            await self.__acquire_mpd_assets(type_asset="albums")
+                # Store MPD library
+                if type_asset in ["artists", "albums"]:
+                    await self.__acquire_mpd_assets(type_asset=type_asset)
             time.sleep(seconds_interval)
 
     def start_processing(self, seconds_interval: int = 1800):
