@@ -29,7 +29,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class LastFmMusicLibrarySyncer:
+class LastfmMusicLibrarySyncer:
     def __init__(self, mpd_library: MPDLibrary, lastfm: LastFm) -> None:
         self.lastfm = lastfm
         self.library = mpd_library
@@ -47,12 +47,15 @@ class LastFmMusicLibrarySyncer:
         df_assets["period"] = period
         cols_replace = []
         if type_asset == "artists":
+            cols_dest = ["name_artist_match"]
             cols_replace = ["name_artist"]
         elif type_asset == "albums":
+            cols_dest = ["name_artist_match", "name_album_match"]
             cols_replace = ["name_artist", "name_album"]
         elif type_asset == "songs":
+            cols_dest = ["name_artist_match", "name_song_match"]
             cols_replace = ["name_artist", "name_song"]
-        df_assets[cols_replace] = (
+        df_assets[cols_dest] = (
             df_assets[cols_replace]
             .apply(lambda x: x.str.lower())
             .apply(lambda x: x.str.replace("'", ""))
@@ -60,11 +63,29 @@ class LastFmMusicLibrarySyncer:
         )
         return df_assets
 
+    async def __acquire_mpd_songs(self) -> pd.DataFrame:
+        lst_songs = []
+        sql_statement = """
+        SELECT DISTINCT name_artist, name_song
+        FROM songs_lastfm
+        """
+        df_songs = pd.read_sql(sql=sql_statement, con=self.con_sqlite)
+        for _, song in df_songs.iterrows():
+            mpd_songs = await self.library.get_song(
+                name_artist=song["name_artist"], name_song=song["name_song"]
+            )
+            if mpd_songs is not None and len(mpd_songs) > 0:
+                for mpd_song in mpd_songs:
+                    lst_songs = lst_songs + mpd_song["files"]
+            return lst_songs
+
     async def __acquire_mpd_assets(self, type_asset: str) -> None:
         if type_asset == "artists":
             lst_assets = await self.library.get_artists()
         elif type_asset == "albums":
             lst_assets = await self.library.get_albums()
+        elif type_asset == "songs":
+            lst_assets = await self.__acquire_mpd_songs()
         else:
             return None
         df_assets = pd.DataFrame.from_records(lst_assets)
@@ -91,6 +112,9 @@ class LastFmMusicLibrarySyncer:
             df_assets["album_match"] = (
                 df_assets["album"].str.lower().str.replace('"', "").str.replace("'", "")
             )
+        elif type_asset == "songs":
+            logger.info(f"Songs dataframe is actually datatype {type(df_assets)}")
+            df_assets = df_assets[["file", "artist", "album", "song"]]
         df_assets.to_sql(
             f"{type_asset}_mpd", self.con_sqlite, if_exists="replace", index=False
         )
@@ -105,16 +129,19 @@ class LastFmMusicLibrarySyncer:
                 for period in lst_periods:
                     logger.info(f"Getting top played {type_asset} for period {period}")
                     df = self.__acquire_top_lastfm(
-                            type_asset=type_asset, period=period, limit=1000
-                        )
+                        type_asset=type_asset, period=period, limit=1000
+                    )
                     lst_dfs.append(df)
                 df = pd.concat(lst_dfs)
                 # Store Last.fm results
                 df.to_sql(
-                    f"{type_asset}_lastfm", self.con_sqlite, if_exists="replace", index=False
+                    f"{type_asset}_lastfm",
+                    self.con_sqlite,
+                    if_exists="replace",
+                    index=False,
                 )
                 # Store MPD library
-                if type_asset in ["artists", "albums"]:
+                if type_asset in ["artists", "albums", "songs"]:
                     await self.__acquire_mpd_assets(type_asset=type_asset)
             time.sleep(seconds_interval)
 
@@ -132,34 +159,6 @@ class LastFmMusicLibrarySyncer:
             name="Lastfm Process",
         )
         daemon.start()
-
-    # async def acquire_top_artists(self, period: str, limit: int = 1000):
-    #     self.__acquire_top_lastfm(type_asset="artists", period=period, limit=limit)
-    #     await self.__acquire_mpd_assets(type_asset="artists")
-
-    #     sql_statement = """SELECT
-    #                             lfm.name_artist,
-    #                             lfm.qty_plays
-    #                         FROM artists_lastfm AS lfm
-    #                         INNER JOIN artists_mpd as mpd
-    #                             ON lfm.name_artist = mpd.artist"""
-    #     df_artists = pd.read_sql(sql=sql_statement, con=self.con_sqlite)
-    #     return df_artists
-
-    # async def get_top_albums(self, period: str, limit: int = 1000) -> dict:
-    #     self.__acquire_top_lastfm(type_asset="albums", period=period, limit=limit)
-    #     await self.__acquire_mpd_assets(type_asset="albums")
-
-    #     sql_statement = """SELECT
-    #                             lfm.name_artist,
-    #                             lfm.name_album,
-    #                             lfm.qty_plays
-    #                         FROM albums_lastfm AS lfm
-    #                         INNER JOIN albums_mpd as mpd
-    #                             ON lfm.name_artist = mpd.albumartist AND
-    #                                 lfm.name_album = mpd.album"""
-    #     df_albums = pd.read_sql(sql=sql_statement, con=self.con_sqlite)
-    #     return df_albums
 
     async def __get_mpd_songs(self, lst_source) -> list:
         lst_songs = []
@@ -205,11 +204,63 @@ class LastFmMusicLibrarySyncer:
         return lst_songs
 
 
+class LibraryStats:
+    def __init__(self) -> None:
+        self.con_sqlite = sqlite3.connect(
+            "lastfm.sqlite", check_same_thread=False
+        )  # ":memory:"
+
+    def get_artist_stats(self, period: str="overall") -> dict:
+        sql_statement = """SELECT
+                                lfm.name_artist,
+                                lfm.qty_plays
+                            FROM artists_lastfm AS lfm
+                            INNER JOIN artists_mpd as mpd
+                                ON lfm.name_artist = mpd.artist"""
+        sql_statement = sql_statement + f" WHERE period = {period}"
+        df_artists = pd.read_sql(sql=sql_statement, con=self.con_sqlite)
+        dict_artists = df_artists.to_dict(orient="records")
+        return dict_artists
+
+    def get_album_stats(self, period: str="overall") -> dict:
+        sql_statement = """SELECT
+                                lfm.name_artist,
+                                lfm.name_album,
+                                lfm.qty_plays
+                            FROM albums_lastfm AS lfm
+                            INNER JOIN albums_mpd as mpd
+                                ON lfm.name_artist = mpd.albumartist AND
+                                    lfm.name_album = mpd.album"""
+        sql_statement = sql_statement + f" WHERE period = {period}"
+        df_albums = pd.read_sql(sql=sql_statement, con=self.con_sqlite)
+        dict_albums = df_albums.to_dict(orient="records")
+        return dict_albums
+
+    def get_song_stats(self, period: str="overall") -> dict:
+        sql_statement = """
+        SELECT
+            a.name_song,
+            a.name_artist,
+            a.period,
+            a.qty_plays,
+            b.album,
+            b.file
+        FROM songs_lastfm AS a
+        LEFT JOIN songs_mpd as b
+            ON  b.artist = a.name_artist AND
+                b.song = a.name_song
+        """
+        sql_statement = sql_statement + f" WHERE period = {period}"
+        df_songs = pd.read_sql_query(sql=sql_statement, con=self.con_sqlite)
+        dict_songs = df_songs.to_dict(orient="records")
+        return dict_songs
+
+
 async def main():
     lastfm = LastFm(host=config["HOST_CONTROLLER"], port=config["PORT_CONTROLLER"])
     library = MPDLibrary(host=config["HOST_MPD"])
 
-    matched = LastFmMusicLibrarySyncer(mpd_library=library, lastfm=lastfm)
+    matched = LastfmMusicLibrarySyncer(mpd_library=library, lastfm=lastfm)
     matched.processing_thread()
     while True:
         time.sleep(1800)
