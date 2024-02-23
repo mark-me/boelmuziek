@@ -170,6 +170,7 @@ class LastFm:
                 top_items = user.get_top_tracks(period=period, limit=limit)
         except pylast.NetworkError as e:
             logger.error(f"Failed to get Top Albums because of {e}")
+            return {'status_code': 408, 'details': f"Failed to get Top Albums because of {e}"}
         for top_item in top_items:
             if type_asset == "artists":
                 dict_top_item = {
