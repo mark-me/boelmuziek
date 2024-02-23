@@ -129,8 +129,11 @@ class MPDLibrary(MPDConnection):
 
     async def get_album(self, name_artist: str, name_album: str) -> list:
         lst_artist_albums = await self.get_artist_albums(name_artist=name_artist)
-        album = [album for album in lst_artist_albums if album['album'] == name_album][0]
-        return album
+        lst_results = [album for album in lst_artist_albums if album['album'] == name_album]
+        if len(lst_results) > 0:
+            return lst_results[0]
+        else:
+            return None
 
     async def get_artist_albums(self, name_artist: str) -> list:
         """A list of albums (and their songs) that belong to a specific artists (strict search)
