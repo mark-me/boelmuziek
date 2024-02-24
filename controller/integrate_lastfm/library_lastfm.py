@@ -59,6 +59,23 @@ class LibraryStats:
         dict_artists = df_artists.to_dict(orient="records")
         return dict_artists
 
+    def get_artists_new(self) -> dict:
+        sql_statement = """
+            SELECT
+                lfm.name_artist,
+                lfm.qty_plays
+            FROM artists_lastfm AS lfm
+            INNER JOIN artists_mpd as mpd
+                ON lfm.name_artist = mpd.artist
+            WHERE lfm.period = "7day" AND
+                lfm.name_artist NOT IN (SELECT name_artist
+                                        FROM artists_lastfm
+                                        WHERE period = "overall")
+        """
+        df_artists = pd.read_sql(sql=sql_statement, con=self.con_sqlite)
+        dict_artists = df_artists.to_dict(orient="records")
+        return dict_artists
+
     def get_album_stats(self, period: str="overall") -> dict:
         sql_statement = """
             SELECT
@@ -91,6 +108,27 @@ class LibraryStats:
                             WHERE lfm.name_artist = name_artist AND
                                 lfm.name_album = name_album AND
                                 period != "overall")
+        """
+        df_albums = pd.read_sql(sql=sql_statement, con=self.con_sqlite)
+        dict_albums = df_albums.to_dict(orient="records")
+        return dict_albums
+
+    def get_album_new(self) -> dict:
+        sql_statement = """
+            SELECT
+                lfm.name_artist,
+                lfm.name_album,
+                lfm.qty_plays
+            FROM albums_lastfm AS lfm
+            INNER JOIN albums_mpd as mpd
+                ON lfm.name_artist = mpd.albumartist AND
+                    lfm.name_album = mpd.album
+            WHERE period = "7day" AND
+                NOT EXISTS (SELECT 1
+                            FROM albums_lastfm
+                            WHERE lfm.name_artist = name_artist AND
+                                lfm.name_album = name_album AND
+                                period = "overall")
         """
         df_albums = pd.read_sql(sql=sql_statement, con=self.con_sqlite)
         dict_albums = df_albums.to_dict(orient="records")
@@ -134,6 +172,30 @@ class LibraryStats:
                              WHERE a.name_song = name_song AND
                                     a.name_artist = name_artist AND
                                     period != "overall")
+        """
+        df_songs = pd.read_sql_query(sql=sql_statement, con=self.con_sqlite)
+        dict_songs = df_songs.to_dict(orient="records")
+        return dict_songs
+
+    def get_song_new(self) -> dict:
+        sql_statement = """
+            SELECT
+                a.name_song,
+                a.name_artist,
+                a.period,
+                a.qty_plays,
+                b.album,
+                b.file
+            FROM songs_lastfm AS a
+            LEFT JOIN songs_mpd as b
+                ON  b.artist = a.name_artist AND
+                    b.song = a.name_song
+            WHERE period = "7day" AND
+                NOT EXISTS ( SELECT 1
+                             FROM songs_lastfm
+                             WHERE a.name_song = name_song AND
+                                    a.name_artist = name_artist AND
+                                    period = "overall")
         """
         df_songs = pd.read_sql_query(sql=sql_statement, con=self.con_sqlite)
         dict_songs = df_songs.to_dict(orient="records")
