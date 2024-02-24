@@ -34,10 +34,8 @@ class LastfmMusicLibrarySyncer:
         self.lastfm = lastfm
         self.library = mpd_library
         self.con_sqlite = sqlite3.connect(
-            "lastfm.sqlite", check_same_thread=False
-        )  # ":memory:"
-        self.loved_songs = []
-        self.top_artists = []
+            "db/lastfm.sqlite", check_same_thread=False
+        )
 
     def __acquire_top_lastfm(self, type_asset: str, period: str, limit: int):
         lst_assets = self.lastfm.get_top_assets(
@@ -64,6 +62,8 @@ class LastfmMusicLibrarySyncer:
         return df_assets
 
     async def __acquire_mpd_songs(self) -> pd.DataFrame:
+        """ Get mpd songs based on last.fm results
+        """
         lst_songs = []
         sql_statement = """
         SELECT DISTINCT name_artist, name_song
@@ -196,7 +196,6 @@ class LastfmMusicLibrarySyncer:
 async def main():
     lastfm = LastFm(host=config["HOST_CONTROLLER"], port=config["PORT_CONTROLLER"])
     library = MPDLibrary(host=config["HOST_MPD"])
-
     matched = LastfmMusicLibrarySyncer(mpd_library=library, lastfm=lastfm)
     matched.processing_thread()
     while True:

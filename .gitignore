@@ -161,3 +161,4 @@ cython_debug/
 secrets.yml
 controller/artist_images
 controller/lastfm.sqlite
+controller/db/lastfm.sqlite
