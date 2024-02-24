@@ -174,17 +174,6 @@ class LastfmMusicLibrarySyncer:
                 lst_songs.append(mpd_song)
         return lst_songs
 
-    async def __get_mpd_song(self, lastfm_song: dict) -> list:
-        mpd_song = await self.library.get_song(
-            name_song=lastfm_song["name_song"],
-            name_artist=lastfm_song["name_artist"],
-        )
-        if len(mpd_song) > 0:
-            mpd_song = mpd_song[0]
-            if "qty_plays" in mpd_song.keys():
-                mpd_song["qty_plays"] = mpd_song["qty_plays"]
-        return mpd_song
-
     async def get_top_songs(self, period: str, limit: int = 1000) -> dict:
         lst_lastfm = self.lastfm.get_top_assets(
             type_asset="songs", limit=limit, period=period
@@ -202,58 +191,6 @@ class LastfmMusicLibrarySyncer:
             lst_lastfm = self.lastfm.loved_tracks(limit=limit, page=page)
         lst_songs = await self.__get_mpd_songs(lst_source=lst_lastfm)
         return lst_songs
-
-
-class LibraryStats:
-    def __init__(self) -> None:
-        self.con_sqlite = sqlite3.connect(
-            "lastfm.sqlite", check_same_thread=False
-        )  # ":memory:"
-
-    def get_artist_stats(self, period: str="overall") -> dict:
-        sql_statement = """SELECT
-                                lfm.name_artist,
-                                lfm.qty_plays
-                            FROM artists_lastfm AS lfm
-                            INNER JOIN artists_mpd as mpd
-                                ON lfm.name_artist = mpd.artist"""
-        sql_statement = sql_statement + f" WHERE period = {period}"
-        df_artists = pd.read_sql(sql=sql_statement, con=self.con_sqlite)
-        dict_artists = df_artists.to_dict(orient="records")
-        return dict_artists
-
-    def get_album_stats(self, period: str="overall") -> dict:
-        sql_statement = """SELECT
-                                lfm.name_artist,
-                                lfm.name_album,
-                                lfm.qty_plays
-                            FROM albums_lastfm AS lfm
-                            INNER JOIN albums_mpd as mpd
-                                ON lfm.name_artist = mpd.albumartist AND
-                                    lfm.name_album = mpd.album"""
-        sql_statement = sql_statement + f" WHERE period = {period}"
-        df_albums = pd.read_sql(sql=sql_statement, con=self.con_sqlite)
-        dict_albums = df_albums.to_dict(orient="records")
-        return dict_albums
-
-    def get_song_stats(self, period: str="overall") -> dict:
-        sql_statement = """
-        SELECT
-            a.name_song,
-            a.name_artist,
-            a.period,
-            a.qty_plays,
-            b.album,
-            b.file
-        FROM songs_lastfm AS a
-        LEFT JOIN songs_mpd as b
-            ON  b.artist = a.name_artist AND
-                b.song = a.name_song
-        """
-        sql_statement = sql_statement + f" WHERE period = {period}"
-        df_songs = pd.read_sql_query(sql=sql_statement, con=self.con_sqlite)
-        dict_songs = df_songs.to_dict(orient="records")
-        return dict_songs
 
 
 async def main():
