@@ -3,7 +3,6 @@ import os
 
 class SecretsYAML():
     def __init__(self, file_path: str, app: str, expected_keys: set) -> None:
-        test = os.getcwd()
         self._file = file_path
         self.__create_path()
 
