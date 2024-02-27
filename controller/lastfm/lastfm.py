@@ -1,3 +1,4 @@
+from datetime import date
 from hashlib import md5
 import json
 import logging
@@ -37,8 +38,7 @@ class LastFm:
         self._api_key = "2e031e7b2ab98c1bce14436016185a4d"
         self._shared_secret = "fcce22fac65bcdcfcc249841f4ffed8b"
         self._client = api.LastFMApi(
-            api_key=self._api_key,
-            shared_secret=self._shared_secret
+            api_key=self._api_key, shared_secret=self._shared_secret
         )
         self._secrets = {"session_key": "", "username": ""}
         self._user_secrets_file = SecretsYAML(
@@ -80,7 +80,7 @@ class LastFm:
         )
         return url
 
-    def __get_signature(self, api_method: str) -> str:
+    def __get_auth_signature(self, api_method: str) -> str:
         signature = f"api_key{self._api_key}methodauth.getSessiontoken{self._token}{self._shared_secret}"
         h = md5()
         h.update(signature.encode())
@@ -88,7 +88,7 @@ class LastFm:
         return hash_signature
 
     def request_session_key(self):
-        hash_signature = self.__get_signature()
+        hash_signature = self.__get_auth_signature()
         dict_response = {"error": 13}
         while "error" in dict_response.keys():
             response: str = self._client.post(
@@ -109,6 +109,13 @@ class LastFm:
         self._user_secrets_file.write_secrets(dict_secrets=self._secrets)
         return response
 
+    def __signature(self, dict_params: dict) -> str:
+        keys = sorted(dict_params.keys())
+        param = [k + dict_params[k] for k in keys]
+        param = "".join(param) + self._shared_secret
+        api_sig = md5(param.encode()).hexdigest()
+        return api_sig
+
     def get_artist_bio(self, name_artist: str) -> str:
         response: str = self._client.post(
             method=methods.Artist.GET_INFO,
@@ -122,72 +129,102 @@ class LastFm:
         self, name_artist: str, name_song: str, name_album: str = None
     ) -> None:
         now = int(time.time())
-        logger.info(f"Scrobbling {name_artist}-{name_song} to Last.fm")
-        try:
-            self._network.scrobble(
-                artist=name_artist, title=name_song, album=name_album, timestamp=now
-            )
-        except pylast.NetworkError as e:
-            logger.error(
-                f"Failed to scrobble '{name_artist}-{name_song}' due to {e.underlying_error}"
-            )
-
-    def now_playing_track(
-        self, name_artist: str, name_song: str, name_album: str = None
-    ) -> None:
-        logger.info(f"Set 'now playing' {name_artist}-{name_song} to Last.fm")
-        try:
-            self._network.update_now_playing(
-                artist=name_artist, title=name_song, album=name_album
-            )
-        except pylast.NetworkError as e:
-            logger.error(
-                f"Failed to set Now Playing for '{name_artist} - {name_song}' due to {e.underlying_error}"
-            )
-
-    def __signature(self) -> str:
-        signature = f"api_key{self._api_key}methodtrack.lovesk{self._session_key}{self._shared_secret}"
-        data = {
+        logger.info(f"Scrobbling {name_artist} - {name_song} to Last.fm")
+        dict_params = {
             "api_key": self._api_key,
-            "method": "track.love",
-            "track" : "Cabin in My Mind",
-            "artist" :"Grandaddy",
-            "sk" : self._session_key
-            }
-        keys = sorted(data.keys())
-        param = [k+data[k] for k in keys]
-        param = "".join(param) + self._shared_secret
-        api_sig = md5(param.encode()).hexdigest()
-        return api_sig
-
-    def love_track(self, name_artist: str, name_song: str) -> bool:
-        logger.info(f"Loving {name_artist} - {name_song} on Last.fm")
-        signature = self.__signature()
+            "method": "track.scrobble",
+            "track": name_song,
+            "artist": name_artist,
+            "sk": self._session_key,
+            "timestamp": now,
+        }
+        if name_album is not None:
+            dict_params["album"] = name_album
+        signature = self.__signature(dict_params=dict_params)
+        # TODO: Add album to scrobble
         result = self._client.post(
-            method=methods.Track.LOVE,
-            params=params.TrackLove(
-                artist=name_artist,
-                track=name_song,
-                api_key=self._api_key,
+            method=methods.Track.SCROBBLE,
+            params=params.TrackScrobble(
+                artist=dict_params["artist"],
+                track=dict_params["track"],
+                api_key=dict_params["api_key"],
                 api_sig=signature,
-                sk=self._session_key,
+                sk=dict_params["sk"],
+                timestamp=dict_params["timestamp"],
             ),
             additional_params=dict(format="json"),
         )
         return result
 
-    def get_loved_tracks(self, limit: int) -> list:
-        logger.info(f"Get {self._network.username}'s loved tracks")
-        user = self._network.get_authenticated_user()
-        lst_tracks = user.get_loved_tracks(limit=limit)
+    def now_playing_track(
+        self, name_artist: str, name_song: str, name_album: str = None
+    ) -> None:
+        logger.info(f"Set 'now playing' {name_artist}-{name_song} to Last.fm")
+        dict_params = {
+            "api_key": self._api_key,
+            "method": "track.updateNowPlaying",
+            "track": name_song,
+            "artist": name_artist,
+            "sk": self._session_key,
+        }
+        if name_album is not None:
+            dict_params["album"] = name_album
+        signature = self.__signature(dict_params=dict_params)
+        # TODO: Add album to now playing
+        result = self._client.post(
+            method=methods.Track.UPDATE_NOW_PLAYING,
+            params=params.TrackUpdateNowPlaying(
+                artist=dict_params["artist"],
+                track=dict_params["track"],
+                api_key=dict_params["api_key"],
+                api_sig=signature,
+                sk=dict_params["sk"],
+            ),
+            additional_params=dict(format="json"),
+        )
+        return result
+
+    def love_track(self, name_artist: str, name_song: str) -> bool:
+        logger.info(f"Loving {name_artist} - {name_song} on Last.fm")
+        dict_params = {
+            "api_key": self._api_key,
+            "method": "track.love",
+            "track": name_song,
+            "artist": name_artist,
+            "sk": self._session_key,
+        }
+        signature = self.__signature(dict_params=dict_params)
+        result = self._client.post(
+            method=methods.Track.LOVE,
+            params=params.TrackLove(
+                artist=dict_params["artist"],
+                track=dict_params["track"],
+                api_key=dict_params["api_key"],
+                api_sig=signature,
+                sk=dict_params["sk"],
+            ),
+            additional_params=dict(format="json"),
+        )
+        return result
+
+    def get_loved_tracks(self, page: int = 1) -> list:
+        logger.info(f"Get {self._username}'s loved tracks")
+        result = self._client.post(
+            method=methods.User.GET_LOVED_TRACKS,
+            params=params.UserGetLovedTracks(
+                user=self._username, page=page, api_key=self._api_key
+            ),
+            additional_params=dict(format="json"),
+        )
+        lst_tracks = json.loads(result)["lovedtracks"]["track"]
         lst_loved_tracks = []
         for track in lst_tracks:
             lst_loved_tracks.append(
                 {
-                    "datetime": parser.parse(track.date),
-                    "timestamp": int(track.timestamp),
-                    "name_song": track.track.title,
-                    "name_artist": track.track.artist.name,
+                    "datetime": parser.parse(track["date"]["#text"]),
+                    "timestamp": int(track["date"]["uts"]),
+                    "name_song": track["name"],
+                    "name_artist": track["artist"]["name"],
                 }
             )
         return lst_loved_tracks
@@ -255,12 +292,16 @@ class LastFm:
             lst_results.append(dict_top_item)
         return lst_results
 
-    def get_recent_songs(self, page: int = 1):
+    def get_recent_songs(self, time_to: str, time_from: str = 0, page: int = 1):
         lst_songs = []
         response: str = self._client.post(
             method=methods.User.GET_RECENT_TRACKS,
             params=params.UserGetRecentTracks(
-                user=self._username, page=page, extended=True
+                user=self._username,
+                page=page,
+                extended=True,
+                to=time_to,
+                from_=time_from,
             ),
             additional_params=dict(format="json"),
         )
@@ -279,4 +320,5 @@ class LastFm:
 
 if __name__ == "__main__":
     lstfm = LastFm()
-    result = lstfm.love_track(name_artist="Grandaddy", name_song="Cabin in My Mind")
+    result = lstfm.get_recent_songs(time_to="1394059277")
+    print(result)
