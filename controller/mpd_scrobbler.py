@@ -5,11 +5,11 @@ import time
 
 from dotenv import dotenv_values
 
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
-
-from lastfm.lastfm import LastFm
+from lastfm.player_listening import LastFmListening
 from mpd_client.mpd_server import MPDController
 from mpd_client.mpd_queue import MPDQueue
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 logging.basicConfig(
     format="%(levelname)s:\t%(asctime)s - %(module)s: %(message)s",
@@ -90,7 +90,7 @@ class Scrobbler:
         host_mpd: str,
         port_mpd: int = 6600,
     ) -> None:
-        self.lastfm = LastFm(host=host_controller, port=port_controller)
+        self.lastfm = LastFmListening()
         self.mpd = MPDController(host=host_mpd, port=port_mpd)
         self.queue = MPDQueue(host=host_mpd, port=port_mpd)
         self.stopwatch = StopWatch()

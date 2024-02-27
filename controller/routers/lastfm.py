@@ -4,14 +4,14 @@ from dotenv import dotenv_values
 from enum import Enum
 import os
 
-from lastfm.lastfm import LastFm
+from controller.lastfm.lastfm_client import LastFmClient
 
 config = {
     **dotenv_values(".env"),  # load shared development variables
     **os.environ,  # override loaded values with environment variables
 }
 
-lastfm = LastFm(host=config["HOST_CONTROLLER"], port=config["PORT_CONTROLLER"])
+lastfm = LastFmClient(host=config["HOST_CONTROLLER"], port=config["PORT_CONTROLLER"])
 
 router = APIRouter(prefix="/lastfm", tags=["Last.fm resources"])
 

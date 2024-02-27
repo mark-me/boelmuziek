@@ -14,7 +14,7 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 os.chdir("..")
 
 from mpd_client.mpd_library import MPDLibrary
-from lastfm.lastfm import LastFm
+from lastfm.lastfm_client import LastFmClient
 
 config = {
     **dotenv_values(".env"),  # load shared development variables
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class LastfmMusicLibrarySyncer:
-    def __init__(self, mpd_library: MPDLibrary, lastfm: LastFm) -> None:
+    def __init__(self, mpd_library: MPDLibrary, lastfm: LastFmClient) -> None:
         self.lastfm = lastfm
         self.library = mpd_library
         self.con_sqlite = sqlite3.connect(
@@ -194,7 +194,7 @@ class LastfmMusicLibrarySyncer:
 
 
 async def main():
-    lastfm = LastFm(host=config["HOST_CONTROLLER"], port=config["PORT_CONTROLLER"])
+    lastfm = LastFmClient(host=config["HOST_CONTROLLER"], port=config["PORT_CONTROLLER"])
     library = MPDLibrary(host=config["HOST_MPD"])
     matched = LastfmMusicLibrarySyncer(mpd_library=library, lastfm=lastfm)
     matched.processing_thread()
