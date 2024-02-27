@@ -33,7 +33,7 @@ class SecretsYAML():
                         'detail': f"Error loading file: {str(e)}"}
 
         # Check if there are any app settings
-        if not self._app in yaml_data.keys():
+        if self._app not in yaml_data.keys():
             return False, f"No settings for {self._app} in : {self._file}"
 
         # Check if there are apps
@@ -49,7 +49,6 @@ class SecretsYAML():
         Args:
             dict_secrets (dict): dictionary containing the secrets
         """
-        test = os.getcwd()
         try:
             with open(self._file, 'r') as file:
                 yaml_data = yaml.safe_load(file)
