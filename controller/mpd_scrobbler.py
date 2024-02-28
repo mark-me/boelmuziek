@@ -85,8 +85,6 @@ class Scrobbler:
 
     def __init__(
         self,
-        host_controller: str,
-        port_controller: int,
         host_mpd: str,
         port_mpd: int = 6600,
     ) -> None:
@@ -184,7 +182,7 @@ class Scrobbler:
                 )
                 if perc_played > 0.5 or dict_indicators["stopwatch_seconds"] > 360:
                     await self.scrobble(song=prev_playing_track)
-        elif control_state == "stop":
+        elif control_state == "stop" and playing_track is not None:
             perc_played = (
                 dict_indicators["stopwatch_seconds"] / playing_track["duration"]
             )
@@ -244,8 +242,6 @@ def main():
     }
 
     scrobbler = Scrobbler(
-        host_controller=config["HOST_CONTROLLER"],
-        port_controller=config["PORT_CONTROLLER"],
         host_mpd=config["HOST_MPD"],
     )
     asyncio.run(scrobbler.start())
