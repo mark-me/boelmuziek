@@ -35,19 +35,33 @@ class LastFmListening(LastFmClient):
         if name_album is not None:
             dict_params["album"] = name_album
         signature = self.signature(dict_params=dict_params)
-        # TODO: Add album to scrobble
-        result = self._client.post(
-            method=methods.Track.SCROBBLE,
-            params=params.TrackScrobble(
-                artist=dict_params["artist"],
-                track=dict_params["track"],
-                api_key=dict_params["api_key"],
-                api_sig=signature,
-                sk=dict_params["sk"],
-                timestamp=dict_params["timestamp"],
-            ),
-            additional_params=dict(format="json"),
-        )
+        if name_album is not None:
+            result = self._client.post(
+                method=methods.Track.SCROBBLE,
+                params=params.TrackScrobble(
+                    artist=dict_params["artist"],
+                    album=dict_params["album"],
+                    track=dict_params["track"],
+                    api_key=dict_params["api_key"],
+                    api_sig=signature,
+                    sk=dict_params["sk"],
+                    timestamp=dict_params["timestamp"],
+                ),
+                additional_params=dict(format="json"),
+            )
+        else:
+            result = self._client.post(
+                method=methods.Track.SCROBBLE,
+                params=params.TrackScrobble(
+                    artist=dict_params["artist"],
+                    track=dict_params["track"],
+                    api_key=dict_params["api_key"],
+                    api_sig=signature,
+                    sk=dict_params["sk"],
+                    timestamp=dict_params["timestamp"],
+                ),
+                additional_params=dict(format="json"),
+            )
         return result
 
     def now_playing_track(
@@ -61,19 +75,32 @@ class LastFmListening(LastFmClient):
             "artist": name_artist,
             "sk": self._session_key
         }
-        # if name_album is not None:
-        #     dict_params["album"] = name_album
+        if name_album is not None:
+            dict_params["album"] = name_album
         signature = self.signature(dict_params=dict_params)
-        # TODO: Add album to now playing
-        result = self._client.post(
-            method=methods.Track.UPDATE_NOW_PLAYING,
-            params=params.TrackUpdateNowPlaying(
-                artist=dict_params["artist"],
-                track=dict_params["track"],
-                api_key=dict_params["api_key"],
-                sk=dict_params["sk"],
-                api_sig=signature
-            ),
-            additional_params=dict(format="json"),
-        )
+        if name_album is not None:
+            result = self._client.post(
+                method=methods.Track.UPDATE_NOW_PLAYING,
+                params=params.TrackUpdateNowPlaying(
+                    artist=dict_params["artist"],
+                    album=dict_params["album"],
+                    track=dict_params["track"],
+                    api_key=dict_params["api_key"],
+                    sk=dict_params["sk"],
+                    api_sig=signature
+                ),
+                additional_params=dict(format="json"),
+            )
+        else:
+            result = self._client.post(
+                method=methods.Track.UPDATE_NOW_PLAYING,
+                params=params.TrackUpdateNowPlaying(
+                    artist=dict_params["artist"],
+                    track=dict_params["track"],
+                    api_key=dict_params["api_key"],
+                    sk=dict_params["sk"],
+                    api_sig=signature
+                ),
+                additional_params=dict(format="json"),
+            )
         return result
