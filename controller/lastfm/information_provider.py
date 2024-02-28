@@ -231,6 +231,8 @@ class LastFmInfo(LastFmClient):
             table_stage = self.__song_play_stage(recent_songs=recent_songs)
             # Load
             qty_added = self.__song_play_load(table_stage=table_stage)
+            if qty_added == 0:
+                break
             page = page + 1
 
     def __play_years_sql(self, type_asset: str, year: int=None):
