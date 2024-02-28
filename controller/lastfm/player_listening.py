@@ -22,7 +22,7 @@ class LastFmListening(LastFmClient):
     def scrobble_track(
         self, name_artist: str, name_song: str, name_album: str = None
     ) -> None:
-        now = int(time.time())
+        now = str(int(time.time()))
         logger.info(f"Scrobbling {name_artist} - {name_song} to Last.fm")
         dict_params = {
             "api_key": self._api_key,
@@ -71,36 +71,22 @@ class LastFmListening(LastFmClient):
         dict_params = {
             "api_key": self._api_key,
             "method": "track.updateNowPlaying",
+            "album": name_album,
             "track": name_song,
             "artist": name_artist,
             "sk": self._session_key
         }
-        if name_album is not None:
-            dict_params["album"] = name_album
         signature = self.signature(dict_params=dict_params)
-        if name_album is not None:
-            result = self._client.post(
-                method=methods.Track.UPDATE_NOW_PLAYING,
-                params=params.TrackUpdateNowPlaying(
-                    artist=dict_params["artist"],
-                    album=dict_params["album"],
-                    track=dict_params["track"],
-                    api_key=dict_params["api_key"],
-                    sk=dict_params["sk"],
-                    api_sig=signature
-                ),
-                additional_params=dict(format="json"),
-            )
-        else:
-            result = self._client.post(
-                method=methods.Track.UPDATE_NOW_PLAYING,
-                params=params.TrackUpdateNowPlaying(
-                    artist=dict_params["artist"],
-                    track=dict_params["track"],
-                    api_key=dict_params["api_key"],
-                    sk=dict_params["sk"],
-                    api_sig=signature
-                ),
-                additional_params=dict(format="json"),
-            )
+        result = self._client.post(
+            method=methods.Track.UPDATE_NOW_PLAYING,
+            params=params.TrackUpdateNowPlaying(
+                artist=dict_params["artist"],
+                album=dict_params["album"],
+                track=dict_params["track"],
+                api_key=dict_params["api_key"],
+                sk=dict_params["sk"],
+                api_sig=signature
+            ),
+            additional_params=dict(format="json"),
+        )
         return result
