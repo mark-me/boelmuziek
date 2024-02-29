@@ -22,7 +22,7 @@ class LastFmListening(LastFmClient):
     def scrobble_track(
         self, name_artist: str, name_song: str, name_album: str = None
     ) -> None:
-        now = str(int(time.time()))
+        now = int(time.time())
         logger.info(f"Scrobbling {name_artist} - {name_song} to Last.fm")
         dict_params = {
             "api_key": self._api_key,
@@ -30,7 +30,7 @@ class LastFmListening(LastFmClient):
             "track": name_song,
             "artist": name_artist,
             "sk": self._session_key,
-            "timestamp": now,
+            "timestamp": str(now),
         }
         if name_album is not None:
             dict_params["album"] = name_album
@@ -45,7 +45,7 @@ class LastFmListening(LastFmClient):
                     api_key=dict_params["api_key"],
                     api_sig=signature,
                     sk=dict_params["sk"],
-                    timestamp=dict_params["timestamp"],
+                    timestamp=now,
                 ),
                 additional_params=dict(format="json"),
             )
