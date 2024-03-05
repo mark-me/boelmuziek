@@ -293,6 +293,21 @@ class LastFmInfo(LastFmClient):
         df = pd.read_sql_query(sql_statement, self.db_conn)
         return df.to_dict(orient="records")
 
+    def artist_rediscover_year(self, year: int) -> dict:
+        sql_statement = f"""
+        SELECT  name_artist, strftime('%Y', dt_played) AS year
+        FROM song_plays
+        WHERE CAST(strftime('%Y', dt_played) AS INT) = {year} AND
+            name_artist NOT IN
+            ( SELECT name_artist
+            FROM song_plays
+            WHERE CAST(strftime('%Y', dt_played) AS INT) < {year}
+            GROUP BY  name_artist)
+        GROUP BY  name_artist, strftime('%Y', dt_played)
+        """
+        df = pd.read_sql_query(sql_statement, self.db_conn)
+        return df.to_dict(orient="records")
+
     def album_new_discovery(self):
         sql_statement = """
         SELECT
@@ -310,6 +325,21 @@ class LastFmInfo(LastFmClient):
         GROUP BY cur.name_artist,
                 cur.name_album
         ORDER BY COUNT(*) DESC
+        """
+        df = pd.read_sql_query(sql_statement, self.db_conn)
+        return df.to_dict(orient="records")
+
+    def album_rediscover_year(self, year: int) -> dict:
+        sql_statement = f"""
+        SELECT  name_artist, name_album, strftime('%Y', dt_played) AS year
+        FROM song_plays
+        WHERE CAST(strftime('%Y', dt_played) AS INT) = {year} AND
+            name_artist || name_album NOT IN
+            ( SELECT name_artist || name_album
+            FROM song_plays
+            WHERE CAST(strftime('%Y', dt_played) AS INT) < {year}
+            GROUP BY  name_artist || name_album)
+        GROUP BY  name_artist, name_album, strftime('%Y', dt_played)
         """
         df = pd.read_sql_query(sql_statement, self.db_conn)
         return df.to_dict(orient="records")
