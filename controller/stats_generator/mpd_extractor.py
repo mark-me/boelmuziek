@@ -13,8 +13,7 @@ sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 os.chdir("..")
 
-from mpd_library import MPDLibrary
-
+from mpd_client.mpd_library import MPDLibrary
 
 config = {
     **dotenv_values(".env"),  # load shared development variables
@@ -100,7 +99,7 @@ class MPDExtractor:
         while True:
             for type_asset in lst_asset_types:
                 # Store MPD library
-                if type_asset in ["artists", "albums", "songs"]:
+                if type_asset in ["artists", "albums"]: #, "songs"]:
                     await self.__acquire_mpd_assets(type_asset=type_asset)
             time.sleep(seconds_interval)
 
