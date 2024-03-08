@@ -1,9 +1,7 @@
-import datetime
 import logging
 import os
 import sqlite3
 import sys
-
 
 import pandas as pd
 
@@ -20,100 +18,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
-class LastFmExtractor(LastFmInfo):
+class StatsQuery():
     def __init__(self) -> None:
-        super(LastFmExtractor, self).__init__()
         self.db_conn = sqlite3.connect("db/lastfm.sqlite")  # ":memory:")
-
-    def extract_recent_songs(self):
-        recent_songs: list = None
-        now = datetime.datetime.utcnow
-        page = 1
-        while recent_songs is None or len(recent_songs) > 0:
-            recent_songs = self.get_recent_songs(time_to=now, page=page)
-            df = pd.DataFrame(recent_songs)
-            df.to_sql(
-                name="song_played", con=self.db_conn, if_exists="append", index=False
-            )
-            page = page + 1
-
-    def __song_play_create_table(self):
-        sql_statement = """
-        CREATE TABLE IF NOT EXISTS song_plays (
-            name_artist     TEXT,
-            name_album      TEXT,
-            name_song       TEXT,
-            dt_played       TIMESTAMP,
-            match_artist    TEXT,
-            match_album     TEXT,
-            match_song      TEXT
-        )
-        """
-        cur = self.db_conn.cursor()
-        cur.execute(sql_statement)
-        self.db_conn.commit()
-
-    def __song_play_stage(self, recent_songs: dict) -> str:
-        table_stage = "song_plays_stage"
-        # Create data-frame and transform data
-        df = pd.DataFrame(recent_songs)
-        cols_dest = ["match_artist", "match_album", "match_song"]
-        cols_replace = ["name_artist", "name_album", "name_song"]
-        df[cols_dest] = (
-            df[cols_replace]
-            .apply(lambda x: x.str.lower())
-            .apply(lambda x: x.str.replace("'", ""))
-            .apply(lambda x: x.str.replace('"', ""))
-        )
-        # Write stage table
-        df.to_sql(
-            name=table_stage, con=self.db_conn, if_exists="replace", index=False
-        )
-        return table_stage
-
-    def __song_play_load(self, table_stage: str) -> None:
-        table_dest = "song_plays"
-        self.__song_play_create_table()
-        sql_add_to_dest = f"""
-        INSERT INTO {table_dest}
-        SELECT
-            tmp.name_artist,
-            tmp.name_album,
-            tmp.name_song,
-            tmp.dt_played,
-            tmp.match_artist,
-            tmp.match_album,
-            tmp.match_song
-        FROM {table_stage} as tmp
-        LEFT JOIN {table_dest} as dest
-            ON dest.name_artist = tmp.name_artist AND
-                dest.name_album = tmp.name_album AND
-                dest.name_song = tmp.name_song AND
-                dest.dt_played = tmp.dt_played
-        WHERE dest.dt_played IS NULL
-        """
-        cur = self.db_conn.cursor()
-        cur = cur.execute(sql_add_to_dest)
-        qty_added = cur.rowcount
-        self.db_conn.commit()
-        return qty_added
-
-    def song_play_process(self):
-        now = datetime.datetime.utcnow
-        page = 1
-        while True:
-            # Extract
-            recent_songs = self.get_recent_songs(time_to=now, page=page)
-            if len(recent_songs) == 0:
-                break
-            # Stage
-            table_stage = self.__song_play_stage(recent_songs=recent_songs)
-            # Load
-            qty_added = self.__song_play_load(table_stage=table_stage)
-            if qty_added == 0:
-                break
-            page = page + 1
 
     def __play_years_sql(self, type_asset: str, year: int=None):
         if type_asset == "artists":
@@ -236,13 +143,3 @@ class LastFmExtractor(LastFmInfo):
 
     #     self.db_conn.commit()
     #     self.db_conn.close()
-
-
-def main():
-    info = LastFmExtractor()
-    dict_result = info.song_play_process()
-    print(dict_result)
-
-
-if __name__ == "__main__":
-    main()

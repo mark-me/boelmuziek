@@ -8,11 +8,9 @@ import sqlite3
 import sys
 import time
 from threading import Thread
-
 sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 os.chdir("..")
-
 from mpd_client.mpd_library import MPDLibrary
 
 config = {
@@ -40,17 +38,19 @@ class MPDExtractor:
         """
         lst_songs = []
         sql_statement = """
-        SELECT DISTINCT name_artist, name_song
-        FROM songs_lastfm
+        SELECT DISTINCT albumartist, album
+        FROM albums_mpd
         """
-        df_songs = pd.read_sql(sql=sql_statement, con=self.con_sqlite)
-        for _, song in df_songs.iterrows():
-            mpd_songs = await self.library.get_song(
-                name_artist=song["name_artist"], name_song=song["name_song"]
+        df_albums = pd.read_sql(sql=sql_statement, con=self.con_sqlite)
+        for _, album in df_albums.iterrows():
+            mpd_album = await self.library.get_album(
+                name_artist=album["albumartist"], name_album=album["album"]
             )
+            mpd_songs = mpd_album["files"]
             if mpd_songs is not None and len(mpd_songs) > 0:
                 for mpd_song in mpd_songs:
-                    lst_songs = lst_songs + mpd_song["files"]
+                    song = await self.library.get_file_info(file=mpd_song["file"])
+                    lst_songs = lst_songs + song
             return lst_songs
 
     async def __acquire_mpd_assets(self, type_asset: str) -> None:
@@ -99,7 +99,7 @@ class MPDExtractor:
         while True:
             for type_asset in lst_asset_types:
                 # Store MPD library
-                if type_asset in ["artists", "albums"]: #, "songs"]:
+                if type_asset in ["songs"]: # "artists", "albums"]: #
                     await self.__acquire_mpd_assets(type_asset=type_asset)
             time.sleep(seconds_interval)
 

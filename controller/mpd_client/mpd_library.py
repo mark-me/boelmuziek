@@ -152,7 +152,7 @@ class MPDLibrary(MPDConnection):
         lst_query_results = helper.nest_album(lst_query_results)
         return lst_query_results
 
-    async def get_song(self, name_song: str, name_artist: str=None, is_cover: bool=False):
+    async def get_song(self, name_song: str, name_artist: str=None, is_cover: bool=False) -> list:
         await self.connect()
         lst_songs = []
         lst_songs = await self.mpd.search("title", name_song)
@@ -169,6 +169,9 @@ class MPDLibrary(MPDConnection):
             lst_songs = helper.nest_artist_album(lst_songs)
         return lst_songs
 
+    async def get_file_info(self, file: str) -> dict:
+        song = await self.mpd.find('file', file, "group", "artist")
+        return song
 
     async def search(self, type: str, filter: str, starts_with: bool = False):
         """Searches for artists, albums or songs.
