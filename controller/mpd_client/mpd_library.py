@@ -1,4 +1,5 @@
 import logging
+import os
 import random as rnd
 
 from mpd_client import helper
@@ -170,7 +171,8 @@ class MPDLibrary(MPDConnection):
         return lst_songs
 
     async def get_file_info(self, file: str) -> dict:
-        song = await self.mpd.find('file', file, "group", "artist")
+        dir = os.path.dirname(file)
+        song = await self.mpd.listallinfo(dir)
         return song
 
     async def search(self, type: str, filter: str, starts_with: bool = False):
