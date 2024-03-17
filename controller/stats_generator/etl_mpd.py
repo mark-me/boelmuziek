@@ -53,65 +53,68 @@ class MPDExtractor:
                     lst_songs = lst_songs + song
             return lst_songs
 
-    async def __acquire_mpd_assets(self, type_asset: str) -> None:
-        if type_asset == "artists":
-            lst_assets = await self.library.get_artists()
-        elif type_asset == "albums":
-            lst_assets = await self.library.get_albums()
-        elif type_asset == "songs":
-            lst_assets = await self.__acquire_mpd_songs()
-        else:
-            return None
-        df_assets = pd.DataFrame.from_records(lst_assets)
-        if type_asset == "artists":
-            df_assets["artist_match"] = (
-                df_assets["artist"]
-                .str.lower()
-                .str.replace('"', "")
-                .str.replace("'", "")
-            )
-            # Sort DataFrame by the length of 'artist' column in descending order
-            df_assets = df_assets.sort_values(
-                by="artist", key=lambda x: x.str.len(), ascending=False
-            )
-            # Drop duplicates in 'name_artist' column, keeping the first occurrence
-            df_assets = df_assets.drop_duplicates(subset="artist_match", keep="first")
-        elif type_asset == "albums":
-            df_assets["artist_match"] = (
-                df_assets["albumartist"]
-                .str.lower()
-                .str.replace('"', "")
-                .str.replace("'", "")
-            )
-            df_assets["album_match"] = (
-                df_assets["album"].str.lower().str.replace('"', "").str.replace("'", "")
-            )
-        elif type_asset == "songs":
-            logger.info(f"Songs dataframe is actually datatype {type(df_assets)}")
-            df_assets = df_assets[["file", "artist", "album", "song"]]
-        df_assets.to_sql(
-            f"{type_asset}_mpd", self.con_sqlite, if_exists="replace", index=False
+    async def __etl_artists(self) -> None:
+        lst_artists = await self.library.get_artists()
+        df_artists = pd.DataFrame.from_records(lst_artists)
+        df_artists["artist_match"] = (
+            df_artists["artist"]
+            .str.lower()
+            .str.replace('"', "")
+            .str.replace("'", "")
         )
+        # Sort DataFrame by the length of 'artist' column in descending order
+        df_artists = df_artists.sort_values(
+            by="artist", key=lambda x: x.str.len(), ascending=False
+        )
+        # Drop duplicates in 'name_artist' column, keeping the first occurrence
+        df_artists = df_artists.drop_duplicates(subset="artist_match", keep="first")
+        df_artists.to_sql(
+            f"artists_mpd", self.con_sqlite, if_exists="replace", index=False
+        )
+    async def __etl_albums(self) -> pd.DataFrame:
+        lst_albums = await self.library.get_albums()
+        df_albums = pd.DataFrame.from_records(lst_albums)
+        df_albums["artist_match"] = (
+            df_albums["albumartist"]
+            .str.lower()
+            .str.replace('"', "")
+            .str.replace("'", "")
+        )
+        df_albums["album_match"] = (
+            df_albums["album"].str.lower().str.replace('"', "").str.replace("'", "")
+        )
+        df_albums.to_sql(
+            f"albums_mpd", self.con_sqlite, if_exists="replace", index=False
+        )
+        return df_albums
 
-    async def __acquire_data(self, seconds_interval: int = 1800):
+    async def __etl_songs(dir_album: str) -> None:
+        pass
+
+    async def __etl_loop(self, seconds_interval: int = 1800):
         lst_asset_types = ["artists", "albums", "songs"]
 
         while True:
-            for type_asset in lst_asset_types:
+            await self.__etl_artists()
+            await self.__etl_albums()
+            # for _, row in df_albums.iterrows():
+            #     album = await self.library.get_album(name_artist=row["albumartist"], name_album=row['album'])
+            #     pass
+            #for type_asset in lst_asset_types:
                 # Store MPD library
-                if type_asset in ["songs"]: # "artists", "albums"]: #
-                    await self.__acquire_mpd_assets(type_asset=type_asset)
+            #     if type_asset in ["songs"]: # "artists", "albums"]: #
+            #         await self.__acquire_mpd_assets(type_asset=type_asset)
             time.sleep(seconds_interval)
 
-    def start_processing(self, seconds_interval: int = 1800):
+    def etl_schedule(self, seconds_interval: int = 1800):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(self.__acquire_data(seconds_interval))
+        loop.run_until_complete(self.__etl_loop(seconds_interval))
         loop.close()
 
-    def processing_thread(self, seconds_interval: int = 1800):
+    def start_etl_thread(self, seconds_interval: int = 1800):
         daemon = Thread(
-            target=self.start_processing,
+            target=self.etl_schedule,
             args=(seconds_interval,),
             daemon=True,
             name="Lastfm Process",
@@ -121,7 +124,7 @@ class MPDExtractor:
 
 def main():
     info = MPDExtractor()
-    info.processing_thread()
+    info.start_etl_thread()
     while True:
         time.sleep(1800)
 
