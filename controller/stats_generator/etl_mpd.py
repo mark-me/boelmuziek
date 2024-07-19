@@ -69,7 +69,7 @@ class MPDExtractor:
         # Drop duplicates in 'name_artist' column, keeping the first occurrence
         df_artists = df_artists.drop_duplicates(subset="artist_match", keep="first")
         df_artists.to_sql(
-            f"artists_mpd", self.con_sqlite, if_exists="replace", index=False
+            "artists_mpd", self.con_sqlite, if_exists="replace", index=False
         )
     async def __etl_albums(self) -> pd.DataFrame:
         lst_albums = await self.library.get_albums()
@@ -84,7 +84,7 @@ class MPDExtractor:
             df_albums["album"].str.lower().str.replace('"', "").str.replace("'", "")
         )
         df_albums.to_sql(
-            f"albums_mpd", self.con_sqlite, if_exists="replace", index=False
+            "albums_mpd", self.con_sqlite, if_exists="replace", index=False
         )
         return df_albums
 
