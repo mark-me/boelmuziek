@@ -89,6 +89,28 @@ services:
         - ${DIR_MPD_STATE}/snapfifo:/var/lib/snapserver/soundshare/snapfifo:rw'
     networks:
       - music_stack
+  nginx:
+    container_name: nginx
+    build:
+      context: ./nginx
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      DOMAIN_NAME: $DOMAIN_NAME
+    volumes:
+      - /data/certbot/conf:/etc/letsencrypt
+      - /data/certbot/www:/var/www/certbot
+  certbot-auto:
+    container_name: certbot
+    build:
+      context: ./certbot-auto
+    volumes:
+      - /data/certbot/conf:/etc/letsencrypt
+      - /data/certbot/www:/var/www/certbot
+    environment:
+      DOMAIN_NAME: ${DOMAIN_NAME}
+      EMAIL_ADDRESS: ${EMAIL_ADDRESS}
 
 networks:
   music_stack:
