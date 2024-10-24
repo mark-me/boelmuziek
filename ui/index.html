@@ -1,10 +1,1089 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>Page Title</title>
-</head>
-<body>
-    <h1>This is a Heading</h1>
-    <p>This is a paragraph.</p>
-</body>
+<!-- 
+    IDEAS ABOUT FEATURES
+
+    Header/footer fade
+    After switching .view, the header and footer may fade into an opacity of about 0.6 to emphasize main contents.
+
+    Paswword
+    Use a passphrase to enable full-song playing (cut off after 1 minute?). And a subset of demo songs?
+    Storing a certificate on phones, based on a passphrase hash? Let users refill the password for unknown URLs?
+
+    Scroll-to-thumb
+    Have page content scroll up to the middle of the screen for an easy thumb-based UX?
+
+
+    MOTIVATION & REMARKS
+
+    1   Missing or hiding scrollbar
+    Mobile browsers use minimalist and auto-hiding scrollbars, which give a fleeting indication of page height. 
+    There's a (webkit) bug on iOS that only shows the thumb in its system theme color. And since support for 
+    scrollbar-color is also absent on iOS, I've decided to add my own thumb.
+
+    2   Keyboard + scroll
+    When the keyboard is shown, browsers either resize or scroll the underlying page. This is hard to control,
+    and resizing can trigger landscape mode as well. Meta tags are not uniformly supported either.
+-->
+<html lang="en" data-theme="light" data-systemtheme="true">
+<!-- <html lang="en" data-theme="dark" data-systemtheme="true"> -->
+    <head>
+        <title>Audiophone</title>
+        <!-- 
+            interactive-widget=resizes-content doesn't work on iOS, and makes some browsers switch to landscape
+        -->
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <!-- <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=overlays-content" /> -->
+        <!-- <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-visual" /> -->
+        <meta charset="UTF-8">
+        <style>
+
+            @font-face {
+                font-family: 'Regular';
+                font-style: normal;
+                font-weight: 400;
+                src: url('assets/barlow-v12-latin-regular.woff2') format('woff2');
+            }
+
+            @font-face {
+                font-family: 'Semicondensed';
+                font-style: normal;
+                font-weight: 400;
+                src: url('assets/barlow-semi-condensed-v15-latin-regular.woff2') format('woff2');
+            }
+
+            @font-face {
+                font-family: 'Condensed';
+                font-style: normal;
+                font-weight: 400;
+                src: url('assets/barlow-condensed-v12-latin-regular.woff2') format('woff2');
+            }
+
+            @font-face {
+                font-family: 'Icons';
+                src: url('assets/material-icons-sharp.woff2') format('woff2');
+            }
+
+            .material-icons {
+                font-family: 'Icons';
+                font-weight: normal;
+                font-style: normal;
+                font-size: 8vw;  /* Preferred icon size */
+                display: inline-block;
+                line-height: 1;
+                text-transform: none;
+                letter-spacing: normal;
+                word-wrap: normal;
+                white-space: nowrap;
+                direction: ltr;
+
+                -webkit-font-smoothing: antialiased;
+                text-rendering: optimizeLegibility;
+                -moz-osx-font-smoothing: grayscale;
+                font-feature-settings: 'liga';
+            }
+
+            /* theme */
+
+            * { font-family: Regular, sans-serif; font-size: 6vw; color: var(--front); }
+
+            /* 3456789abcde */
+            /* 23456789 */
+            html[data-theme=light] { --front: #444; --back: #fff; --shade: #ccc; --line: #ddd; color-scheme: light; }
+            html[data-theme=dark]  { --front: #aaa; --back: #111; --shade: #444; --line: #333; color-scheme: dark;  }
+
+            /* fade the header and footer a bit on the main page (less relevant UI) */
+            /* html[data-theme=light] #main_page header, 
+            html[data-theme=light] #main_page footer { opacity: 0.7; }
+            html[data-theme=dark]  #main_page header, 
+            html[data-theme=dark]  #main_page footer { opacity: 0.8; } */
+
+            /* images in dark theme are better a little less bright */
+            html[data-theme=dark] img { filter: brightness(80%); }
+           
+            body { background: var(--back); }
+            
+            /* standard buttons */
+            button                            { background: var(--back); color: var(--front); padding: 0.5rem; border: none;  }
+            button:active                     { background: var(--front); color: var(--back); }
+            button.select.shade               { background: var(--shade) !important; }
+            button[disabled]                  { background: var(--back); color: var(--shade) !important; }
+            /* don't highlight :active tabs */
+            button.tab:active                 { background: var(--back);  color: var(--front); }
+            /* primary buttons and -inputs use inverted colors */
+            button.primary,
+            input.primary                     { background: var(--front); color: var(--back); }
+            /* button[disabled].primary          { background: var(--front); color: var(--shade) !important; } WERKT NIET? */
+            /* primary buttons :active */
+            button.primary:active,
+            input.primary[type=reset]:active,
+            input.primary[type=button]:active { background: var(--back); color: var(--front); }
+            /* toggle buttons don't use an :active effect */
+            button.toggle                     { background: var(--back);  color: var(--front); }
+
+            input        { background: var(--back); color: var(--front); }
+            /* input:active { background: var(--front); color: var(--back); } */
+            input        { padding: 0.5rem; border: none; border-radius: 0; }
+            input:focus  { background: var(--front); color: var(--back); caret-color: var(--back); outline: none; }
+
+            .page:not(.tab_pressed) .tab.select { background: var(--front); color: var(--back); }
+
+            h2 { font-family: Semicondensed; font-size: 7vw; font-weight: normal; }
+
+            .regular       { font-family: Regular; }
+            .semicondensed { font-family: Semicondensed; }
+            .condensed     { font-family: Condensed; }
+            .center        { text-align: center; }
+            .info,
+            .info span     { font-size: 4.5vw; }
+            .small         { font-size: 5.0vw; }
+            ::placeholder  { color: var(--shade) !important; opacity: 1; }
+            /* ::-moz-placeholder? */
+
+            hr { margin: 1rem 0; height: 1px; background: var(--line); border: none; }
+
+            /* header, footer { box-shadow: 0 0 1rem var(--back); } */
+            /* header, footer { box-shadow: 0 0 1rem var(--front); } */
+            /* header { border-bottom: 1px solid var(--shade); } */
+            /* footer { border-top:    1px solid var(--shade); } */
+
+            /* layout */
+            header, footer { z-index: 3; }
+
+            h2 { padding-bottom: 0.5em; }
+
+            .group { padding-bottom: 2rem; }
+            .group > div { padding: 0 0.5rem 0.5rem; }
+
+            /* minimal css-reset */
+            * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
+            /* prevent erratic page scrolling, and only scroll .view elements instead */
+            html, body, .page, main  { overflow: hidden; }
+            .view                    { overflow: hidden scroll; height: 100%; width: 100%; padding: 1rem; }
+            /* .view                    { overflow: hidden scroll; height: 100%; width: 100%; padding: 1rem 0.5rem; } */
+            .views                   { height: 100%; }
+
+            /* for using the custom thumb */
+            #thumb                   { right: 0; width: 1vw; height: 0; background: var(--shade); position: fixed; top: 0; }
+            .view                    { scrollbar-width: none; }
+            .view::-webkit-scrollbar { display: none; }
+
+            /* fixing .page elements to the viewport also correctly places any <header> and <footer> */
+            .page { top: 0; right: 0; bottom: 0; left: 0; position: fixed; }
+
+            /* hacks to make this more look like an app */
+            html, body { overscroll-behavior: none; }      /* prevent page reloads on swiping down from the top  */
+            html { -webkit-text-size-adjust: 100%; }       /* prevent scaling when switching orientations on iOS */
+            :root { touch-action: manipulation; }          /* block double-tap zoom on iOS */
+            /* I've seen the page can get stuck moved up under the address bar on Firefox (Android) */
+            html, body { height: 100%; overflow: hidden; } 
+
+            /* give Android Chrome scrollbar more contrast */
+            /* :root { scrollbar-color: var(--front) transparent; } */
+
+            /* min-width on <input> is needed to not make them too wide in display: grid settings */
+            input { min-width: 0; text-overflow: ellipsis; }
+
+            .page:not(.display),
+            .view:not(.display) { display: none; }
+
+            .grid          { display: grid; }
+            .grid.rows_af  { grid-template-rows: auto 1fr; }
+            .grid.rows_afa { grid-template-rows: auto 1fr auto; }
+            .grid.cols_af  { grid-template-columns: auto 1fr; }
+            .grid.cols_fa  { grid-template-columns: 1fr auto; }
+            .grid.cols_faa { grid-template-columns: 1fr auto auto; }
+            .grid.cols_afa { grid-template-columns: auto 1fr auto; }
+            .grid.cols_5a  { grid-template-columns: repeat(5, auto); }
+
+            .flex        { display: flex; align-content: stretch; align-items: stretch; }
+            .flex > *    { width: 100%; }
+            .flex.center { justify-content: center; }
+            .flex.center > * { width: auto; }
+
+            .wide { display: block; width: 100%; }
+            .pre  { white-space: pre; overflow: hidden; }
+
+            /* overlays are meant to be shown temporarily */
+            .overlay      { position: fixed; top: 0; right: 0; bottom: 0; left: 0; display: none; }
+            .overlay      { color: var(--front); background: var(--back); flex-direction: column; justify-content: center; align-items: center; }
+            .overlay span { font-size: 15vmin; }
+
+            /* show a not-supported icon in landscape */
+            @media screen and (orientation: landscape) { #landscape_overlay { display: flex; } }
+            @media screen and (orientation: portrait)  { #landscape_overlay { display: none; } }
+
+            /* page swiping (also needed for crossfades between pages) */
+            main          { position: relative; } 
+            .view         { position: absolute; opacity: 0; }
+            .view.display { z-index: 1;         opacity: 1; }
+            .view.swiping { z-index: 2; display: block; }
+
+            /* show a border when the content is scrollable */
+           .view        { border-top: 1px solid transparent; border-bottom: 1px solid transparent; }
+           .view.scroll { border-color: var(--line); }
+
+            svg { fill: var(--shade); width: 100%; height: auto; padding: 0 10vw; }
+
+            /* hide effect for tabtouch */
+            .view      { opacity: 1; }
+            .view.hide { opacity: 0; transition: opacity 0.3s; }
+
+            /* this ///fadein effect didn't look nice on iOS */
+            /* .view.show { animation: show 0.3s forwards; } */
+            /* @keyframes show { 0% { opacity: 0; } 100% { opacity: 1; } } */
+
+            /* highlights the active theme setting buttons */
+            html[data-systemtheme=true]                    #systemtheme,
+            html[data-systemtheme=false][data-theme=light] #lighttheme,
+            html[data-systemtheme=false][data-theme=dark]  #darktheme { background: var(--shade); }
+
+
+            #error        { background: gray; padding: 0.5rem; position: fixed; width: 100%; }
+            #error::after { content: '\2715'; opacity: 0.5; position: absolute; top: 3px; right: 0.5rem; font-size: 1rem; }
+            #error div    { color: white; font-family: monospace; font-size: 60%; }
+
+            #qrcode_div        { width: 100%; padding: 1rem; background: #fff; pointer-events: none; }
+            #qrcode_div canvas { width: 100%; }
+            #qrcode_div img    { width: 100%; filter: none; }
+
+            #search_page      { height: auto; }
+            #search_page main { height: auto; max-height: 100%; }
+
+            /* #password_input::placeholder { color: var(--front) !important; } */
+
+            /* img.cover { width: 100%; height: calc((100vw - 2rem) / 2 ); } */
+            img.cover { width: 100%; }
+
+            /* body { padding: 10px 0; background: var(--front); } */
+            /* #pages { background: red; } */
+            /* .page { top: 3px; right: 0; bottom: 3px; left: 0; position: fixed; } */
+            /* .page { border-top: 1px solid silver; border-bottom: 1px solid silver; } */
+
+            #search_list                   { display: flex; flex-direction: column; gap: 1rem 0; }
+            #search_list div               { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 0 0.5rem; }
+            #search_list span:nth-child(1) { color: var(--shade); }
+            #search_list span:nth-child(2) { font-family: Condensed; white-space: pre; text-overflow: ellipsis; }
+
+            #splash_overlay    { background-image: url(assets/record.jpg); background-size: cover; background-position: 71% center; background-repeat: no-repeat; }
+            #splash_overlay h1 { color: #fff; font-size: 12vw; font-weight: normal; letter-spacing: 0.2em; font-family: Condensed; text-align: center; }
+        </style>
+        <!-- 
+            html, body { overscroll-behavior: none; } /* prevent page reloads on swiping down from the top  */
+            html { -webkit-text-size-adjust: 100%; }  /* prevent scaling text when switching orientation on iOS */
+            ::-webkit-scrollbar { display: none; }    /* hide the iOS scrollbar (it didn't show in my dark theme) */
+            * { touch-action: manipulation; }         /* block double-tap zoom on iOS */
+            * { overscroll-behavior-block: none; }    /* don't scroll-bounce on iOS */
+            body { -webkit-overflow-scrolling: touch; }  voor iOS (haperige scroll)?
+        -->
+    </head>
+    <body>
+        <div id="wrapper">
+            <section id="pages">
+                <div id="main_page" class="page display grid rows_afa">
+                    <header>
+                        <span class="grid cols_5a">
+                            <button id="menu_tab"    class="tab material-icons">menu</button>
+                            <button id="artists_tab" class="tab material-icons select">person</button>
+                            <button id="albums_tab"  class="tab material-icons">album</button>
+                            <button id="tracks_tab"  class="tab material-icons">audiotrack</button>
+                            <button id="context_tab" class="tab material-icons">more_vert</button>
+                        </span>
+                        <button id="search_button" class="wide">SEARCH</button>
+                    </header>
+                    <main>
+                        <section class="views">
+                            <div id="menu_view" class="view">
+                                <section id="appearance" class="group">
+                                    <h2>Appearance</h2>
+                                    <div class="flex">
+                                        <button id="darktheme"   class="toggle material-icons">dark_mode</button>
+                                        <button id="systemtheme" class="toggle material-icons">phone_android</button>
+                                        <button id="lighttheme"  class="toggle material-icons">light_mode</button>
+                                        <button id="fullscreen"  class="toggle material-icons" disabled>fullscreen</button>
+                                    </div>
+                                    <div class="samsung info"> <!-- add style="display: none" when certain that only Samsung overrides themes -->
+                                        If themes don't look good on your device;<br>
+                                        go to settings and enable 'Light theme sites' (for Samsung browsers).
+                                    </div>
+                                </section>
+                                <section id="device"class="group">
+                                    <h2>Device</h2>
+                                    <div class="info">
+                                        Select the correct type here. App versions are not intended to work across devices.
+                                    </div>
+                                    <div class="flex">
+                                        <button id="phone"   class="toggle material-icons select shade">phone_android</button>
+                                        <button id="tablet"  class="toggle material-icons" disabled>tablet</button>
+                                        <button id="dekstop" class="toggle material-icons" disabled>desktop_windows</button>
+                                    </div>
+                                </section>
+                                <section id="app" class="group">
+                                    <h2>App</h2>
+                                    <div class="grid cols_afa">
+                                        <button id="qrcode_button" class="material-icons">qr_code</button>
+                                        <input  id="url_input" type="text" class="condensed" readonly>
+                                        <button id="url_button"    class="material-icons">content_copy</button>
+                                    </div>
+                                    <div class="info">
+                                        <!-- You may share this URL with others. Being a demo version, it only plays CC BY 4.0 licensed classical music. -->
+                                        You may share this URL with others. Being a demo version, this app uses royalty- and copyright free classical music.
+                                        <!-- it only plays CC BY 4.0 licensed classical music. -->
+                                    </div>
+                                    <!-- <input  id="password_input" type="password" placeholder="PASSWORD" class="wide regular center"> -->
+                                </section>
+                                <section id="help" class="group">
+                                    <h2>Help</h2>
+                                    <div class="info grid cols_fa">
+                                        <span>Read this brief guide for the best user experience:</span>
+                                        <button class="material-icons" disabled>help</button>
+                                    </div>
+                                </section>
+                                <section id="device" class="group">
+                                    <h2>About</h2>
+                                    <div class="info grid cols_fa">
+                                        <span>Audiophone allows you to play your music anywhere.</span>
+                                        <button class="material-icons" disabled>info</button>
+                                    </div>
+                                </section>
+                                <!--
+                                <section class="group">
+                                    <img class="cover" src="dummy-data/Tom Waits – Rain Dogs.jpg">
+                                </section>
+                                -->
+                                <!--
+                                <p>
+                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                                </p>
+                                <p>
+                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                                </p>
+                                -->
+                            </div>
+                            <div id="artists_view" class="view canswipe display">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                            </div>
+                            <div id="albums_view" class="view canswipe">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/></svg>
+                            </div>
+                            <div id="tracks_view" class="view canswipe">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                            </div>
+                            <div id="context_view" class="view">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                            </div>
+                            <div id="bookmarks_view" class="view canswipe">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M19 3H5v18l7-3 7 3V3z"/></svg>
+                            </div>
+                            <div id="playlist_view" class="view canswipe">
+                                <svg xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="24px" viewBox="0 0 24 24" width="24px"><g><rect fill="none" height="24" width="24"/></g><g><path d="M15,6H3v2h12V6z M15,10H3v2h12V10z M3,16h8v-2H3V16z M17,6v8.18C16.69,14.07,16.35,14,16,14c-1.66,0-3,1.34-3,3s1.34,3,3,3 s3-1.34,3-3V8h3V6H17z"/></g></svg>
+                            </div>
+                        </section>
+                    </main>
+                    <footer>
+                        <span class="grid cols_5a">
+                            <button id="bookmarks_tab"   class="tab material-icons">bookmark</button>
+                            <button id="playlist_tab"    class="tab material-icons">queue_music</button>
+                            <button id="previous_button" class="material-icons">skip_previous</button>
+                            <button id="play_button"     class="material-icons">play_circle</button>
+                            <button id="next_button"     class="material-icons">skip_next</button>
+                        </span>
+                    </footer>
+                </div>
+                <div id="search_page" class="page grid rows_af">
+                    <header>
+                        <form class="grid cols_faa">
+                            <input id="search_box" class="primary" type="text">
+                            <input type="reset"    class="primary material-icons" value="clear">
+                            <input type="button"   class="primary material-icons" value="arrow_forward" disabled>
+                        </form>
+                    </header>
+                    <main>
+                        <section class="views">
+                            <div class="view display">
+                                <!-- 
+                                    Tom Traubert's Blues - Tom Waits
+                                    Tom Waits
+                                    Tom McRae
+                                    Tom Petty and the Heartbreakers
+                                    Tom Jones
+                                    Tom's diner
+                                    Peeping Tom
+                                -->
+                                <div id="search_list">
+                                    <template>
+                                        <div class="row grid cols_af">
+                                            <span class="tab material-icons">audiotrack</span>
+                                        </div>
+                                    </template>
+                                    <!-- 
+                                        Artist / Album + Artist / Track + Artist
+
+                                        <section #search_list .flex .rows (+ .flex.cols)
+                                            <div .row .grid .cols_af
+                                                <span .icon
+                                                <div .text
+                                                    <span item
+                                                    <span info
+                                    -->
+                                    <div>
+                                        <span class="tab material-icons">audiotrack</span>
+                                        <span>Tom Traubert's Blues<div class="condensed small">Tom Waits</div></span>
+                                    </div>
+                                    <div>
+                                        <span class="tab material-icons">person</span>
+                                        <span>Tom Waits</span>
+                                    </div>
+                                    <div>
+                                        <span class="tab material-icons">person</span>
+                                        <span>Tom McRae</span>
+                                    </div>
+                                    <div>
+                                        <span class="tab material-icons">album</span>
+                                        <span>Tom Petty and the Heartbreakers<div class="condensed small">Tom Petty and the Heartbreakers</div></span>
+                                    </div>
+                                    <div>
+                                        <span class="tab material-icons">person</span>
+                                        <span>Tom Petty and the Heartbreakers</span>
+                                    </div>
+                                </div>
+                                <hr>
+                                <!--
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                                -->
+                            </div>
+                        </section>
+                    </main>
+                </div>
+            </section>
+
+            <div id="thumb"></div>
+
+            <section id="overlays">
+                <div id="splash_overlay" class="overlay" style="display: flex;">
+                    <span><h1>Audiophone</h1></span>
+                </div>
+                <div id="qrcode_overlay"    class="overlay"><div id="qrcode_div"></div></div>
+                <div id="landscape_overlay" class="overlay"><span class="material-icons">screen_rotation</span></div>
+                <div id="desktop_overlay"   class="overlay"><span class="material-icons">desktop_windows</span></div>
+            </section>
+
+            <div id="error" style="display: none"></div>
+        </div>
+
+        <script src="assets/qrcode.min.js"></script>
+
+        <script>
+
+            /*
+                SNIPPETS FOUND ALONG THE WAY
+
+                window.matchMedia('(orientation: landscape)').addListener(function(media) {
+                    const orientation = (media.matches ? 'landscape' : 'portrait')
+                })
+            */
+
+
+            const DOM = {
+                first (css, root = document) { return root.querySelector(css) },
+                all   (css, root = document) { return Array.from(root.querySelectorAll(css)) }
+            }
+
+
+            new QRCode(DOM.first('#qrcode_div'), {
+                text: location.href,
+                width:       512,    // higher than default resolution needed for Android Firefox
+                height:      512,
+                colorDark :  '#111', // why not match the themes?
+                colorLight : '#fff',
+            })
+
+            DOM.first('#url_input').value       =
+            DOM.first('#url_input').placeholder = location.href
+
+
+            // const ctx = DOM.first('canvas').getContext('2d')
+            // ctx.imageSmoothingEnabled = true
+
+DOM.first('#qrcode_button').onclick = function(event) {
+
+    DOM.first('#qrcode_overlay').style.display = 'flex'
+}
+
+
+DOM.first('#url_button').onclick = function(event) {
+
+    navigator.clipboard.writeText(location.href)
+}
+
+
+DOM.first('#qrcode_overlay').onclick = function(event) {
+
+    event.target.style.display = null
+}
+
+
+DOM.first('#darktheme').onclick = function(event) {
+
+    DOM.first('html').dataset.systemtheme = 'false'
+    UI.setTheme('dark')
+}
+
+
+DOM.first('#systemtheme').onclick = function(event) {
+
+    const dataset = DOM.first('html').dataset
+    if (dataset.systemtheme == 'false') {
+        dataset.systemtheme =  'true'
+        UI.setTheme('system')
+    }
+}
+
+
+DOM.first('#lighttheme').onclick = function(event) {
+
+    DOM.first('html').dataset.systemtheme = 'false'
+    UI.setTheme('light')
+}
+
+
+if (document.documentElement.requestFullscreen == undefined) {
+
+    /*
+        Disabled for now:
+        > On Firefox (at least on Android), content can get stuck vertically keeping empty space on the bottom (even across page reloads).
+        > On (Android) Chrome, scroll can be disabled when the keyboard is shown (hiding the <input> from view).
+    */
+    // DOM.first('#fullscreen').setAttribute('disabled', '')
+}
+
+
+document.documentElement.onfullscreenchange = function(event) {
+
+    if (document.fullscreenElement == null)
+        DOM.first('#fullscreen').textContent = 'fullscreen'
+    else
+        DOM.first('#fullscreen').textContent = 'fullscreen_exit'
+}
+
+
+DOM.first('#fullscreen').onclick = function(event) {
+
+    if (document.documentElement.requestFullscreen) {
+        if (document.fullscreenElement == null)
+            /*
+                I prefer to keep the navigation UI in fullscreen, which seems more practical. 
+                This works on Android Chrome, but not on Firefox though. I've also seen 
+                an issues on Chrome in an early version, which required interaction to reset
+                the viewport height.
+            */
+            // document.documentElement.requestFullscreen({ navigationUI: 'show' })
+            document.documentElement.requestFullscreen({ navigationUI: 'hide' }) // or maybe not
+        else 
+            document.exitFullscreen()
+
+        UI.updateThumb()
+    }
+}
+
+
+DOM.first('#error').onclick = function(event) {
+    DOM.first('#error').style.display = 'none'
+    DOM.first('#error').innerHTML = ''
+}
+
+
+            window.ontouchstart    = window_ontouchstart
+            window.ontouchmove     = window_ontouchmove
+            window.ontouchend      = window_ontouchend
+            window.ontouchcancel   = window_ontouchcancel
+  
+            window.onclick         = window_onclick
+  
+            window.onkeydown       = window_onkeydown
+  
+            window.onload          = window_onload
+            window.onresize        = window_onresize
+            window.onerror         = window_onerror
+
+            for (const view of DOM.all('.view')) view.onscroll = view_onscroll
+
+            window.visualViewport.onresize = window_visualViewport_onresize
+            // window.visualViewport.onscroll = window_visualViewport_onscroll
+
+
+            const UI = {
+
+                ontouchstart: UI_ontouchstart,
+                ontouchend:   UI_ontouchend,
+
+                onswipe:      UI_onswipe,
+
+                get page() { return UI_get_page() },
+                get view() { return UI_get_view() },
+
+                clense:      UI_clense,
+                gotoView:    UI_gotoView,
+                swipeView:   UI_swipeView,
+                endSwipe:    UI_endSwipe,
+
+                updateThumb: UI_updateThumb,
+                setTheme:    UI_setTheme,
+
+                getViewFor:  UI_getViewFor,
+                getTabFor:   UI_getTabFor,
+
+                display:     UI_display,
+            }
+
+
+            const Touch = {
+
+                down: {
+                    x: 0,
+                    y: 0
+                }
+            }
+
+
+            const Swipe = {
+
+                swipeFactor:  2.5,
+                swipeTrigger: 5,
+
+                get range()   { return Drag_get_range() },
+
+                finished:  false,
+                direction: '',
+                type:      '',
+
+                analyze: Drag_analyze,
+
+                delta: {
+                    x: 0,
+                    y: 0
+                }
+            }
+
+
+            function window_ontouchstart(event) {
+
+                Touch.down.x  = event.touches[0].clientX
+                Touch.down.y  = event.touches[0].clientY
+
+                Swipe.finished = false
+                Swipe.type     = null
+                Swipe.delta.x  = 
+                Swipe.delta.y  = 0
+
+                UI.clense()
+                UI.ontouchstart(event)
+            }
+
+
+            function window_ontouchmove(event) {
+
+                if (Swipe.finished == false) {
+                    Swipe.delta.x = event.touches[0].clientX - Touch.down.x
+                    Swipe.delta.y = event.touches[0].clientY - Touch.down.y
+
+                    Swipe.analyze()
+
+                    UI.onswipe(event)
+                }
+            }
+
+
+            function window_ontouchend(event) {
+
+                UI.ontouchend(event)
+                window.setTimeout(() => { UI.clense() }, 200)
+                // UI.clense()
+            }
+
+
+            function window_ontouchcancel(event) {
+
+                UI.clense()
+            }
+
+
+            function window_onclick(event) {
+
+                /// hack to reload page
+                const doReload = (event.target == DOM.first('#play_button'))
+                if (doReload) 
+                    location.reload()
+
+                /*
+                    Tab-navigates between views.
+                */
+                const 
+                    onTab  = event.target.classList.contains('tab'),
+                    notSet = !event.target.classList.contains('select')
+
+                if (onTab && notSet) {
+                    const view = UI.getViewFor(event.target)
+                    UI.gotoView(view)
+                }
+
+                /*
+                */
+                const gotoSearch = (event.target == DOM.first('#search_button')) /// gotoPage
+                if (gotoSearch) {
+                    DOM.first('.page.display').classList.remove('display')
+                    DOM.first('#search_page').classList.add('display')
+                    // DOM.first('#search_page').style.height = '200px' /// heeft geen effect
+                    DOM.first('#search_box').focus()
+                    UI.updateThumb()
+                }
+
+                // 
+                const isReset = (event.target.type == 'reset')
+                if (isReset) {
+                    const form = event.target.closest('form')
+                    DOM.first('input', form).focus()
+                }
+            }
+
+
+            function window_onkeydown(event) {
+
+                /// UI.gotoPage()
+                const 
+                    onSearch = DOM.first('#search_page').classList.contains('display'),
+                    enterKey = (event.key == 'Enter')
+
+                if (onSearch && enterKey) {
+                    document.activeElement.blur() // hides the keyboard
+
+                    DOM.first('#search_page').classList.remove('display')
+                    DOM.first('#main_page').classList.add('display')
+                    UI.updateThumb()
+                }
+            }
+
+
+            function window_onload(event) {
+                
+                UI.setTheme('system')
+
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+                    if (DOM.first('html').dataset.systemtheme == 'true')
+                        UI.setTheme('system')
+                })
+
+
+                UI.updateThumb()
+
+                const splash = DOM.first('#splash_overlay')
+                window.setTimeout(function(event) { splash.style.display = null }, 1100)
+            }
+
+
+            function window_onresize(event) {
+
+                UI.updateThumb()
+            }
+
+
+            function window_onerror(msg, file, line, column, error) {
+
+                file = file.replace(location.origin, '')
+                const message = `${ msg }\nin ${ file } on line ${ line }`
+
+                UI.display(message)
+            }
+
+
+            function view_onscroll(event) {
+                
+                UI.updateThumb()
+            }
+
+
+            function window_visualViewport_onresize(event) {
+
+                /*
+                    On iOS the keyboard stays visible when the orientation changes to landscape,
+                    hiding the icon informing the user only portrait is supported.
+                    (this code did work in window.onresize)
+                */
+                const
+                    isLandscape = window.screen.orientation.type.includes('landscape'),
+                    hasKeyboard = (document.activeElement.tagName == 'INPUT')
+
+                if (isLandscape && hasKeyboard)
+                    document.activeElement.blur() // hides the keyboard
+            }
+
+
+            // function window_visualViewport_onscroll(event) {
+
+            //     /// werkt alleen op de complete viewport?
+            //     /// misschien benutten tijdens keyboard?
+            // }
+
+
+            function UI_ontouchstart(event) {
+
+                /*
+                    Fading the current View when a Tab is touched down adds a classy effect,
+                    that makes the app feel more responsive, and goes well with the swipe-fade.
+                */
+                const 
+                    onTab   = event.target.classList.contains('tab'),
+                    isOther = !event.target.classList.contains('select')
+
+                if (onTab && isOther)
+                    UI.view.classList.add('hide')
+            }
+
+
+            function UI_ontouchend(event) {
+
+                if (Swipe.type == 'swipe') {
+
+                    UI.endSwipe()
+                    UI.updateThumb()
+
+                    // the thumb is hidden during swipe
+                    DOM.first('#thumb').style.opacity = null
+                }
+            }
+
+
+            function UI_onswipe(event) {
+
+                if (Swipe.type == 'swipe') {
+
+                    // limit handling of swipe to the main area
+                    if (event.target.closest('main')) {
+                    
+                        // block scrolling (for iPhone)
+                        UI.view.style.overflow = 'hidden'
+
+                        // determine the swipe distance
+                        const distance = Math.hypot(Swipe.delta.x, Swipe.delta.y)
+
+                        // slide in the next view
+                        const 
+                            views = DOM.all('.view', UI.page),
+                            index = views.indexOf(UI.view)
+
+                        const delta = (Swipe.direction == 'left' ? +1 : -1)
+
+                        for (let n = 1; n <= views.length; n++) {
+                            const view = views[(index + n * delta+ views.length) % views.length]
+                            if (view.classList.contains('canswipe')) {
+                                UI.swipeView(view, distance)
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+
+
+            function UI_get_page() {
+
+                return DOM.first('.page.display')
+            }
+
+
+            function UI_get_view() {
+
+                return DOM.first('.view.display')
+            }
+
+
+            function UI_clense() {
+
+                /*
+                    Touch events are not straightforward, so this makes sure that any
+                    leftover classes are removed (also when assigned multiple times).
+                */
+                while (DOM.first('.view.hide', UI.page)) 
+                       DOM.first('.view.hide', UI.page).classList.remove('hide')
+
+                // while (DOM.first('.view.show', UI.page)) ///fadein
+                //        DOM.first('.view.show', UI.page).classList.remove('show')
+            }
+
+
+            function UI_gotoView(view, quickly = true) {
+
+                if (view.classList.contains('display') == false) {
+                    DOM.first('.tab.select', UI.page).classList.remove('select')
+                    DOM.first('.view.display', UI.page).classList.remove('display')
+
+                    UI.clense()
+
+                    // if (!quickly) view.classList.add('show') ///fadein
+                    view.classList.add('display')
+
+                    const tab = UI.getTabFor(view)
+                    tab.classList.add('select')
+
+                    UI.updateThumb()
+                }
+            }
+
+
+            function UI_swipeView(view, distance) {
+
+                // adjusting opacity is much of the effect
+                UI.view.style.opacity = 1 - distance / Swipe.range
+                view.style.opacity  =     distance / Swipe.range
+
+                // hide the (now weird-looking) scrollthumb when swiping
+                UI.view.classList.remove('scroll')
+                DOM.first('#thumb').style.opacity = 0
+
+                // slide the next view into position
+                const position = UI.view.offsetWidth - distance * Swipe.swipeFactor
+
+                view.style[Swipe.direction] = `${ Math.max(0, position) }px`
+                view.classList.add('swiping')
+
+                // check if the swipe should finish
+                if (Swipe.finished == false && position <= 0) {
+                    Swipe.finished =  true
+
+                    // finish the drag to resets styles
+                    UI.endSwipe()
+
+                    // swap the visible page
+                    view.classList.remove('swiping')
+                    view.classList.add('display')
+                }
+            }
+
+
+            function UI_endSwipe() {
+
+                // opacity- and overflow adjustments were made during swipe
+                UI.view.style.opacity  = 
+                UI.view.style.overflow = null
+
+                // additional cleanup of the swiped view
+                const swiped = DOM.first('.view.swiping')
+                if (swiped) {
+                    swiped.style.left    = 
+                    swiped.style.right   = 
+                    swiped.style.opacity = null
+                    swiped.classList.remove('swiping')
+
+                    // only swap tabs if needed
+                    if (Swipe.finished) {
+                        UI.gotoView(swiped, false)
+                    }
+                }
+            }
+
+
+            function UI_updateThumb() {
+
+                const thumb = DOM.first('#thumb')
+                if (!thumb) return
+
+                const { offsetHeight, scrollHeight, scrollTop } = UI.view
+                const { offsetTop } = UI.view.closest('main')
+
+                // determine height and top for the thumb
+                if (offsetHeight < scrollHeight) {
+                    const 
+                        height    = offsetHeight * offsetHeight / scrollHeight,
+                        scrollMax = scrollHeight - offsetHeight,
+                        value     = offsetTop + ((offsetHeight - height) * scrollTop / scrollMax || 0), // || 0 to prevent division by zero
+                        top       = Math.max(offsetTop, Math.min(offsetTop + offsetHeight - height, value))
+
+                    thumb.style.height     = `${ Math.round(height) }px`
+                    thumb.style.top        = `${ Math.round(top) }px`
+                    thumb.style.visibility = 'visible'
+
+                    UI.view.classList.add('scroll')
+                }
+                else {
+                    UI.view.classList.remove('scroll')
+                    thumb.style.visibility = 'hidden'
+                }
+            }
+
+
+            function UI_setTheme(theme) { 
+
+                if (theme == 'system') {
+                    if (window.matchMedia)
+                        theme = (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                    else
+                        theme = 'light' // default
+                }
+
+                const current = DOM.first('html').dataset.theme
+
+                if (current == 'dark'  && theme == 'light' ||
+                    current == 'light' && theme == 'dark') DOM.first('html').dataset.theme = theme
+            }
+
+
+            function UI_getViewFor(tab) {
+
+                const view = DOM.first(`#${ tab.id.replace('_tab', '_view') }`)
+                return view
+            }
+
+
+            function UI_getTabFor(view) {
+
+                const tab = DOM.first(`#${ view.id.replace('_view', '_tab') }`)
+                return tab
+            }
+
+
+            function UI_display(message) {
+
+                const target = DOM.first('#error')
+                target.innerHTML += `<div>${ message }</div>`
+                target.style.display = 'block'
+            }
+
+
+            function Drag_get_range() {
+
+                return DOM.first('html').offsetWidth / Swipe.swipeFactor
+            }
+
+
+            function Drag_analyze() {
+
+                const
+                    { x, y } = Swipe.delta,
+                    distance = Math.hypot(x, y),
+                    minimum  = Swipe.swipeTrigger
+
+                if (Swipe.type == null && distance > minimum) {
+
+                    if (Math.abs(x) > Math.abs(y)) {
+                        Swipe.direction = (x > 0 ? 'right' : 'left')
+                        Swipe.type      = 'swipe'
+                    }
+
+                    else {
+                        Swipe.direction = (y > 0 ? 'down'  : 'up')
+                        Swipe.type      = 'scroll'
+                    }
+                }
+            }
+
+
+            /*
+                Do any other browsers than Samsung apply their own theming?
+            */
+            if(navigator.userAgent.match(/SAMSUNG|Samsung|SGH-[I|N|T]|GT-[I|N]|SM-[A|N|P|T|Z]|SHV-E|SCH-[I|J|R|S]|SPH-L/i)) {
+                for (const info of DOM.all('.samsung.info')) info.style.display = null
+            }
+
+        </script>
+    </body>
 </html>
